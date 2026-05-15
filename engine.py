@@ -266,11 +266,21 @@ class GameState:
             
         card = self.current_auction_card
         highest_bid = self.get_highest_bid()
+        num_players = len(self.players)
         
         if self.auction_type == 'positive':
-            # Max willing to spend
-            max_willing = p.total_money() * 0.25 if (card.type == 'prestige' or card.value >= 5) else p.total_money() * 0.10
+            # Smarter: scale willingness directly by card value and player count
+            player_multiplier = num_players / 2.0
             
+            if card.type == 'prestige':
+                max_willing = 15 * player_multiplier
+            else:
+                max_willing = card.value * player_multiplier
+                
+            # Prevent bidding more than we actually have
+            if max_willing > p.total_money():
+                max_willing = p.total_money()
+                
             import itertools
             valid_combos = []
             for i in range(1, 4): # max 3 cards
@@ -286,7 +296,16 @@ class GameState:
                 self.pass_auction(self.current_player_index)
         else:
             # Negative auction
-            if highest_bid >= 5:
+            max_avoidance_bid = 5
+            if card.name == 'Scandale':
+                max_avoidance_bid = 15 # Worth fighting to avoid
+            elif card.name == 'Theft':
+                max_avoidance_bid = 10
+            elif card.name == 'Faux Pas':
+                max_avoidance_bid = 6
+                
+            # Still cap at ~30% of total money to avoid going broke early for a disgrace
+            if highest_bid >= max_avoidance_bid or highest_bid >= p.total_money() * 0.3:
                 self.pass_auction(self.current_player_index)
             else:
                 # find smallest card to bid

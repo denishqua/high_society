@@ -76,12 +76,17 @@
                             <!-- Populated by JS -->
                         </div>
                         
-                        <div class="action-controls">
+                        <div class="action-controls" id="action-controls-panel">
                             <div class="bid-summary">
                                 Selected: <span id="selected-bid-total" class="gold-text">0</span> 🍌
                             </div>
                             <button id="btn-bid" class="btn-primary">Submit Bid</button>
                             <button id="btn-pass" class="btn-secondary">Pass</button>
+                        </div>
+
+                        <div id="round-result-panel" class="hidden" style="text-align: center; margin-top: 1rem; padding: 1rem; background: rgba(0,0,0,0.5); border-radius: 8px;">
+                            <h4 id="round-result-text" class="gold-text" style="margin-bottom: 1rem;"></h4>
+                            <button id="btn-next-round" class="btn-primary">Next Round</button>
                         </div>
                     </div>
                 </div>

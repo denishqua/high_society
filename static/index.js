@@ -30,6 +30,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const selectedBidTotalEl = document.getElementById('selected-bid-total');
     const btnBid = document.getElementById('btn-bid');
     const btnPass = document.getElementById('btn-pass');
+    
+    // New Round Result UI
+    const actionControlsPanel = document.getElementById('action-controls-panel');
+    const roundResultPanel = document.getElementById('round-result-panel');
+    const roundResultText = document.getElementById('round-result-text');
+    const btnNextRound = document.getElementById('btn-next-round');
+    
     const logContent = document.querySelector('.log-content');
 
     // Game over elements
@@ -133,6 +140,17 @@ document.addEventListener('DOMContentLoaded', () => {
         fetchState();
     });
 
+    btnNextRound.addEventListener('click', async () => {
+        btnNextRound.disabled = true;
+        try {
+            const res = await fetch('/api/next_round', { method: 'POST' });
+            if (res.ok) {
+                fetchState();
+            }
+        } catch (e) { console.error(e); }
+        btnNextRound.disabled = false;
+    });
+
     function updateBidButtonState() {
         if (!gameState) return;
         const total = selectedCards.reduce((a, b) => a + b, 0);
@@ -193,20 +211,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 clearInterval(pollInterval);
                 renderGameOver();
                 showScreen('gameOver');
-            } else if (gameState.status === 'in_progress') {
+            } else if (gameState.status === 'in_progress' || gameState.status === 'round_over') {
                 renderGame();
                 
-                // CPU Action Logic
-                const activeP = gameState.players[gameState.current_player_index];
-                if (activeP.is_cpu && !activeP.has_passed) {
-                    isCpuThinking = true;
-                    setTimeout(async () => {
-                        try {
-                            await fetch('/api/cpu_action', { method: 'POST' });
-                        } catch (e) { console.error(e); }
-                        isCpuThinking = false;
-                        fetchState();
-                    }, parseFloat(cpuSpeedInput.value) * 1000); // User-configurable delay
+                if (gameState.status === 'in_progress') {
+                    // CPU Action Logic
+                    const activeP = gameState.players[gameState.current_player_index];
+                    if (activeP.is_cpu && !activeP.has_passed) {
+                        isCpuThinking = true;
+                        setTimeout(async () => {
+                            try {
+                                await fetch('/api/cpu_action', { method: 'POST' });
+                            } catch (e) { console.error(e); }
+                            isCpuThinking = false;
+                            fetchState();
+                        }, parseFloat(cpuSpeedInput.value) * 1000); // User-configurable delay
+                    }
                 }
             }
         } catch (e) { console.error(e); }
@@ -252,7 +272,11 @@ document.addEventListener('DOMContentLoaded', () => {
             else if (isActive) status = 'Thinking...';
             else status = 'Waiting';
 
-            let tableauHTML = p.tableau.map(c => `<span class="mini-card ${c.type}">${c.name}</span>`).join('');
+            let luxuryCards = p.tableau.filter(c => c.type === 'luxury').map(c => `<span class="mini-card luxury">${c.name}</span>`).join('');
+            let statusCards = p.tableau.filter(c => c.type !== 'luxury').map(c => `<span class="mini-card ${c.type}">${c.name}</span>`).join('');
+            if (p.pending_theft > 0) {
+                 statusCards += `<span class="mini-card disgrace">Pending Theft (${p.pending_theft})</span>`;
+            }
 
             let bidText = `<span class="gold-text">${p.bid_total}</span> 🍌`;
             if (p.current_bid && p.current_bid.length > 0) {
@@ -260,10 +284,14 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             el.innerHTML = `
-                <div class="player-name">🐵 ${p.name}</div>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div class="player-name">🐵 ${p.name}</div>
+                    <div style="font-size: 0.9em; color: var(--gold-light); font-weight: bold;">Score: ${p.score}</div>
+                </div>
                 <div class="player-bid">Current Bid: ${bidText}</div>
                 <div class="player-status">${status}</div>
-                <div class="tableau-mini">${tableauHTML}</div>
+                <div class="tableau-mini">Luxuries: ${luxuryCards || '<span style="opacity:0.5">None</span>'}</div>
+                <div class="tableau-mini">Status: ${statusCards || '<span style="opacity:0.5">None</span>'}</div>
             `;
             playersGrid.appendChild(el);
         });
@@ -292,7 +320,37 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             btnPass.disabled = false;
         }
+        
+        // Handle Round Over state
+        if (gameState.status === 'round_over') {
+            actionControlsPanel.classList.add('hidden');
+            handContainer.classList.add('hidden');
+            document.getElementById('action-prompt').classList.add('hidden');
+            
+            roundResultPanel.classList.remove('hidden');
+            const res = gameState.last_round_result;
+            if (res) {
+                if (res.type === 'positive') {
+                    roundResultText.innerText = `${res.winner} won the ${res.card} for ${res.amount} 🍌!`;
+                } else {
+                    roundResultText.innerText = `${res.winner} took the ${res.card} and reclaimed their bid!`;
+                }
+            }
+        } else {
+            actionControlsPanel.classList.remove('hidden');
+            handContainer.classList.remove('hidden');
+            document.getElementById('action-prompt').classList.remove('hidden');
+            roundResultPanel.classList.add('hidden');
+        }
 
+        // Live Log
+        if (gameState.game_log) {
+            const logHTML = gameState.game_log.map(msg => `<div style="margin-bottom: 4px; padding-bottom: 4px; border-bottom: 1px solid rgba(255,255,255,0.1);">${msg}</div>`).join('');
+            if (logContent.innerHTML !== logHTML) {
+                logContent.innerHTML = logHTML;
+                logContent.scrollTop = logContent.scrollHeight;
+            }
+        }
     }
 
     function updateHandUI(handArray = null) {

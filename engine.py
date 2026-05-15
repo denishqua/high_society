@@ -57,6 +57,20 @@ class Player:
     def total_money(self):
         return sum(self.hand)
 
+    def current_score(self):
+        base = sum(c.value for c in self.tableau if c.type == 'luxury')
+        if any(c.name == "Faux Pas" for c in self.tableau):
+            base -= 5
+            
+        prestige_count = sum(1 for c in self.tableau if c.type == 'prestige')
+        score = base * (2 ** prestige_count)
+        
+        if any(c.name == "Scandale" for c in self.tableau):
+            import math
+            score = math.ceil(score / 2.0)
+            
+        return score
+
     def to_dict(self):
         return {
             'id': self.id,
@@ -68,21 +82,23 @@ class Player:
             'bid_total': self.bid_total(),
             'total_money': self.total_money(),
             'pending_theft': self.pending_theft,
-            'is_cpu': self.is_cpu
+            'is_cpu': self.is_cpu,
+            'score': self.current_score()
         }
 
 class GameState:
     def __init__(self):
+        self.status = "waiting" # waiting, in_progress, round_over, finished
         self.players = []
         self.auction_deck = []
         self.current_auction_card = None
+        self.auction_type = None
         self.end_game_triggers_revealed = 0
         self.current_player_index = 0
         self.starting_player_index = 0
-        self.auction_type = None  # 'positive' or 'negative'
-        self.status = "not_started"
-        self.game_log = []
         self.game_results = None
+        self.game_log = []
+        self.last_round_result = None
 
     def log(self, msg):
         self.game_log.append(msg)
@@ -221,10 +237,19 @@ class GameState:
                 else:
                     winner.tableau.append(self.current_auction_card)
                 
+                
+                amount_spent = winner.bid_total()
                 # Money is discarded
                 winner.current_bid = [] 
                 self.starting_player_index = self.players.index(winner)
-                self.start_round()
+                
+                self.last_round_result = {
+                    "winner": winner.name,
+                    "card": self.current_auction_card.name,
+                    "amount": amount_spent,
+                    "type": "positive"
+                }
+                self.status = "round_over"
             else:
                 self.next_player()
                 
@@ -254,7 +279,13 @@ class GameState:
                     other_p.current_bid = []
                     
             self.starting_player_index = player_index
-            self.start_round()
+            self.last_round_result = {
+                "winner": p.name,
+                "card": self.current_auction_card.name,
+                "amount": 0, # They got it for free (reclaimed bid)
+                "type": "negative"
+            }
+            self.status = "round_over"
 
     def execute_cpu_turn(self):
         if self.status != "in_progress":
@@ -400,7 +431,8 @@ class GameState:
             'starting_player_index': self.starting_player_index,
             'players': [p.to_dict() for p in self.players],
             'game_results': self.game_results,
-            'game_log': self.game_log
+            'game_log': self.game_log,
+            'last_round_result': self.last_round_result
         }
 
 if __name__ == "__main__":

@@ -60,5 +60,13 @@ def cpu_action():
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 400
 
+@app.route("/api/next_round", methods=["POST"])
+def next_round():
+    try:
+        game.start_round()
+        return jsonify({"success": True})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 400
+
 if __name__ == "__main__":
     app.run(debug=True, port=5000)

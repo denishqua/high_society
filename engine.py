@@ -156,6 +156,7 @@ class GameState:
         else:
             self.auction_type = 'negative'
             
+        self.status = "in_progress"
         self.current_player_index = self.starting_player_index
         self.log(f"{self.players[self.current_player_index].name} starts the bidding.")
 

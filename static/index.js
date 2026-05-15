@@ -17,6 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Setup elements
     const humanInput = document.getElementById('human-count');
     const cpuInput = document.getElementById('cpu-count');
+    const cpuSpeedInput = document.getElementById('cpu-speed');
     const btnStart = document.getElementById('btn-start');
     const setupError = document.getElementById('setup-error');
 
@@ -205,7 +206,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         } catch (e) { console.error(e); }
                         isCpuThinking = false;
                         fetchState();
-                    }, 500); // 0.5s delay requested by user
+                    }, parseFloat(cpuSpeedInput.value) * 1000); // User-configurable delay
                 }
             }
         } catch (e) { console.error(e); }

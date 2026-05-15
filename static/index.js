@@ -254,9 +254,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
             let tableauHTML = p.tableau.map(c => `<span class="mini-card ${c.type}">${c.name}</span>`).join('');
 
+            let bidText = `<span class="gold-text">${p.bid_total}</span> 🍌`;
+            if (p.current_bid && p.current_bid.length > 0) {
+                bidText += ` <span style="font-size: 0.8em; color: var(--gold-dark);">[${p.current_bid.join(', ')}]</span>`;
+            }
+
             el.innerHTML = `
                 <div class="player-name">🐵 ${p.name}</div>
-                <div class="player-bid">Current Bid: <span class="gold-text">${p.bid_total}</span> 🍌</div>
+                <div class="player-bid">Current Bid: ${bidText}</div>
                 <div class="player-status">${status}</div>
                 <div class="tableau-mini">${tableauHTML}</div>
             `;

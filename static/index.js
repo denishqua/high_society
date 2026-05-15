@@ -245,17 +245,17 @@ document.addEventListener('DOMContentLoaded', () => {
     function getCardDisplayInfo(card) {
         if (!card) return null;
         
-        // Handle Luxury cards
-        if (card.type === 'luxury') {
-            return { title: 'Luxury', displayValue: card.value, symbol: card.value };
+        // Handle Point cards
+        if (card.type === 'point') {
+            return { title: 'Point', displayValue: card.value, symbol: card.value };
         }
         
-        // Handle Prestige (multiplier) cards
-        if (card.type === 'prestige') {
-            return { title: 'Prestige', displayValue: 'x2', symbol: 'x2' };
+        // Handle Multiplier (multiplier) cards
+        if (card.type === 'multiplier') {
+            return { title: 'Multiplier', displayValue: 'x2', symbol: 'x2' };
         }
         
-        // Handle Disgrace (negative) cards
+        // Handle Penalty (negative) cards
         if (card.name === 'Scandale') return { title: 'Scandale', displayValue: '÷2', symbol: '÷2' };
         if (card.name === 'Faux Pas') return { title: 'Faux Pas', displayValue: '-5', symbol: '-5' };
         if (card.name === 'Theft') return { title: 'Theft', displayValue: '🔪', symbol: '🔪' };
@@ -290,20 +290,20 @@ document.addEventListener('DOMContentLoaded', () => {
             if (p.has_passed) status = 'Passed';
             else if (isActive) status = 'Thinking...';
 
-            // Format Player Tableau (split into point-scoring luxuries and modifiers)
-            const luxuryCards = p.tableau
-                .filter(c => c.type === 'luxury')
-                .map(c => `<span class="mini-card luxury">${getCardDisplayInfo(c).symbol}</span>`)
+            // Format Player Tableau (split into point-scoring point_cards and modifiers)
+            const pointCards = p.tableau
+                .filter(c => c.type === 'point')
+                .map(c => `<span class="mini-card point">${getCardDisplayInfo(c).symbol}</span>`)
                 .join('');
                 
             let statusCards = p.tableau
-                .filter(c => c.type !== 'luxury')
+                .filter(c => c.type !== 'point')
                 .map(c => `<span class="mini-card ${c.type}">${getCardDisplayInfo(c).symbol}</span>`)
                 .join('');
                 
             // Include pending thefts in the status display
             if (p.pending_theft > 0) {
-                 statusCards += `<span class="mini-card disgrace">Pending Theft (${p.pending_theft})</span>`;
+                 statusCards += `<span class="mini-card penalty">Pending Theft (${p.pending_theft})</span>`;
             }
 
             // Format Current Bid
@@ -320,7 +320,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
                 <div class="player-bid">Current Bid: ${bidText}</div>
                 <div class="player-status">${status}</div>
-                <div class="tableau-mini">Points: ${luxuryCards || '<span style="opacity:0.5">None</span>'}</div>
+                <div class="tableau-mini">Points: ${pointCards || '<span style="opacity:0.5">None</span>'}</div>
                 <div class="tableau-mini">Modifiers: ${statusCards || '<span style="opacity:0.5">None</span>'}</div>
             `;
             playersGrid.appendChild(el);

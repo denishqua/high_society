@@ -4,7 +4,7 @@ A digital implementation of the classic auction and bidding game "High Society" 
 
 ## Game Rules
 
-Players bid on Luxury and Prestige cards while trying to avoid Disgrace cards. The game ends instantly when the fourth "End Game" card (Scandale or a Prestige card) is revealed. 
+Players bid on Point and Multiplier cards while trying to avoid Penalty cards. The game ends instantly when the fourth "End Game" card (Scandale or a Multiplier card) is revealed. 
 
 The player with the most points wins. However, there's a catch: **the player with the least money left at the end of the game is instantly eliminated**, regardless of their points! 
 

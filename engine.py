@@ -3,7 +3,7 @@ import random
 class StatusCard:
     def __init__(self, name, card_type, value, is_end_game_trigger=False):
         self.name = name
-        self.type = card_type  # 'luxury', 'prestige', 'disgrace'
+        self.type = card_type  # 'point', 'multiplier', 'penalty'
         self.value = value
         self.is_end_game_trigger = is_end_game_trigger
 
@@ -20,22 +20,22 @@ class StatusCard:
 
 def get_initial_deck():
     return [
-        StatusCard("Luxury 1", "luxury", 1),
-        StatusCard("Luxury 2", "luxury", 2),
-        StatusCard("Luxury 3", "luxury", 3),
-        StatusCard("Luxury 4", "luxury", 4),
-        StatusCard("Luxury 5", "luxury", 5),
-        StatusCard("Luxury 6", "luxury", 6),
-        StatusCard("Luxury 7", "luxury", 7),
-        StatusCard("Luxury 8", "luxury", 8),
-        StatusCard("Luxury 9", "luxury", 9),
-        StatusCard("Luxury 10", "luxury", 10),
-        StatusCard("Prestige 1", "prestige", 2, True),
-        StatusCard("Prestige 2", "prestige", 2, True),
-        StatusCard("Prestige 3", "prestige", 2, True),
-        StatusCard("Faux Pas", "disgrace", -5),
-        StatusCard("Theft", "disgrace", "discard_luxury"),
-        StatusCard("Scandale", "disgrace", "halve_score", True)
+        StatusCard("Point 1", "point", 1),
+        StatusCard("Point 2", "point", 2),
+        StatusCard("Point 3", "point", 3),
+        StatusCard("Point 4", "point", 4),
+        StatusCard("Point 5", "point", 5),
+        StatusCard("Point 6", "point", 6),
+        StatusCard("Point 7", "point", 7),
+        StatusCard("Point 8", "point", 8),
+        StatusCard("Point 9", "point", 9),
+        StatusCard("Point 10", "point", 10),
+        StatusCard("Multiplier 1", "multiplier", 2, True),
+        StatusCard("Multiplier 2", "multiplier", 2, True),
+        StatusCard("Multiplier 3", "multiplier", 2, True),
+        StatusCard("Faux Pas", "penalty", -5),
+        StatusCard("Theft", "penalty", "discard_point"),
+        StatusCard("Scandale", "penalty", "halve_score", True)
     ]
 
 MONEY_CARDS = [1, 2, 3, 4, 5, 8, 10, 12, 15, 20, 25]
@@ -58,12 +58,12 @@ class Player:
         return sum(self.hand)
 
     def current_score(self):
-        base = sum(c.value for c in self.tableau if c.type == 'luxury')
+        base = sum(c.value for c in self.tableau if c.type == 'point')
         if any(c.name == "Faux Pas" for c in self.tableau):
             base -= 5
             
-        prestige_count = sum(1 for c in self.tableau if c.type == 'prestige')
-        score = base * (2 ** prestige_count)
+        multiplier_count = sum(1 for c in self.tableau if c.type == 'multiplier')
+        score = base * (2 ** multiplier_count)
         
         if any(c.name == "Scandale" for c in self.tableau):
             import math
@@ -151,7 +151,7 @@ class GameState:
                 self.end_game()
                 return
 
-        if self.current_auction_card.type in ['luxury', 'prestige']:
+        if self.current_auction_card.type in ['point', 'multiplier']:
             self.auction_type = 'positive'
         else:
             self.auction_type = 'negative'
@@ -232,7 +232,7 @@ class GameState:
                 winner = active_players[0]
                 self.log(f"{winner.name} wins {self.current_auction_card.name} for {winner.bid_total()}!")
                 
-                if self.current_auction_card.type == 'luxury' and winner.pending_theft > 0:
+                if self.current_auction_card.type == 'point' and winner.pending_theft > 0:
                     winner.pending_theft -= 1
                     self.log(f"Pending Theft triggers! {winner.name}'s new {self.current_auction_card.name} is immediately discarded.")
                 else:
@@ -263,16 +263,16 @@ class GameState:
             self.log(f"{p.name} takes {self.current_auction_card.name} and reclaims their bid.")
             
             if self.current_auction_card.name == "Theft":
-                 luxuries = [c for c in p.tableau if c.type == 'luxury']
-                 if luxuries:
-                     # Discard highest value luxury automatically for now
-                     luxuries.sort(key=lambda c: c.value, reverse=True)
-                     discarded = luxuries[0]
+                 point_cards = [c for c in p.tableau if c.type == 'point']
+                 if point_cards:
+                     # Discard highest value point automatically for now
+                     point_cards.sort(key=lambda c: c.value, reverse=True)
+                     discarded = point_cards[0]
                      p.tableau.remove(discarded)
                      self.log(f"Theft triggers! {p.name} discards {discarded.name}.")
                  else:
                      p.pending_theft += 1
-                     self.log(f"Theft triggers, but {p.name} has no luxuries! A pending theft is added.")
+                     self.log(f"Theft triggers, but {p.name} has no point_cards! A pending theft is added.")
             
             # Everyone else discards their bid
             for other_p in self.players:
@@ -304,7 +304,7 @@ class GameState:
             # Smarter: scale willingness directly by card value and player count
             player_multiplier = num_players / 2.0
             
-            if card.type == 'prestige':
+            if card.type == 'multiplier':
                 max_willing = 15 * player_multiplier
             else:
                 max_willing = card.value * player_multiplier
@@ -338,7 +338,7 @@ class GameState:
             elif card.name == 'Faux Pas':
                 max_avoidance_bid = 6
                 
-            # Still cap at ~30% of total money to avoid going broke early for a disgrace
+            # Still cap at ~30% of total money to avoid going broke early for a penalty
             if highest_bid >= max_avoidance_bid or highest_bid >= p.total_money() * 0.3:
                 self.pass_auction(self.current_player_index)
             else:
@@ -371,12 +371,12 @@ class GameState:
         # Scoring
         scores = {}
         for p in self.players:
-            base = sum(c.value for c in p.tableau if c.type == 'luxury')
+            base = sum(c.value for c in p.tableau if c.type == 'point')
             if any(c.name == "Faux Pas" for c in p.tableau):
                 base -= 5
                 
-            prestige_count = sum(1 for c in p.tableau if c.type == 'prestige')
-            score = base * (2 ** prestige_count)
+            multiplier_count = sum(1 for c in p.tableau if c.type == 'multiplier')
+            score = base * (2 ** multiplier_count)
             
             if any(c.name == "Scandale" for c in p.tableau):
                 import math
@@ -398,8 +398,8 @@ class GameState:
             
         # Tie-breaker logic
         def sort_key(p):
-            max_luxury = max([c.value for c in p.tableau if c.type == 'luxury'], default=0)
-            return (scores[p], p.total_money(), max_luxury)
+            max_point = max([c.value for c in p.tableau if c.type == 'point'], default=0)
+            return (scores[p], p.total_money(), max_point)
             
         remaining_players.sort(key=sort_key, reverse=True)
         winner = remaining_players[0]
@@ -444,26 +444,26 @@ if __name__ == "__main__":
     
     # We force the deck to be deterministic for the test
     test_deck = [
-        StatusCard("Scandale", "disgrace", "halve_score", True), # 4th end game
-        StatusCard("Luxury 10", "luxury", 10),
-        StatusCard("Prestige 3", "prestige", 2, True), # 3rd
-        StatusCard("Faux Pas", "disgrace", -5),
-        StatusCard("Prestige 2", "prestige", 2, True), # 2nd
-        StatusCard("Luxury 5", "luxury", 5),
-        StatusCard("Prestige 1", "prestige", 2, True), # 1st
+        StatusCard("Scandale", "penalty", "halve_score", True), # 4th end game
+        StatusCard("Point 10", "point", 10),
+        StatusCard("Multiplier 3", "multiplier", 2, True), # 3rd
+        StatusCard("Faux Pas", "penalty", -5),
+        StatusCard("Multiplier 2", "multiplier", 2, True), # 2nd
+        StatusCard("Point 5", "point", 5),
+        StatusCard("Multiplier 1", "multiplier", 2, True), # 1st
     ]
     game.auction_deck = test_deck
     game.end_game_triggers_revealed = 0
     game.start_round() # Restart with deterministic deck
     
-    # Round 1: Prestige 1 (Positive)
+    # Round 1: Multiplier 1 (Positive)
     p_idx = game.current_player_index
     game.bid(p_idx, [5])
     game.pass_auction(game.current_player_index)
     game.pass_auction(game.current_player_index)
     # Winner should be p_idx
     
-    # Round 2: Luxury 5 (Positive)
+    # Round 2: Point 5 (Positive)
     p_idx = game.current_player_index
     game.pass_auction(p_idx) # Start player passes
     p2 = game.current_player_index
@@ -472,7 +472,7 @@ if __name__ == "__main__":
     game.pass_auction(p3)
     # Winner should be p2
     
-    # Round 3: Prestige 2 (Positive)
+    # Round 3: Multiplier 2 (Positive)
     p_idx = game.current_player_index
     game.bid(p_idx, [12])
     game.pass_auction(game.current_player_index)
@@ -484,13 +484,13 @@ if __name__ == "__main__":
     game.bid(p_idx, [1])
     game.pass_auction(game.current_player_index) # Next player passes immediately
     
-    # Round 5: Prestige 3 (Positive)
+    # Round 5: Multiplier 3 (Positive)
     p_idx = game.current_player_index
     game.bid(p_idx, [20])
     game.pass_auction(game.current_player_index)
     game.pass_auction(game.current_player_index)
     
-    # Round 6: Luxury 10 (Positive)
+    # Round 6: Point 10 (Positive)
     p_idx = game.current_player_index
     game.bid(p_idx, [25])
     game.pass_auction(game.current_player_index)

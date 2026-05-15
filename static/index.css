@@ -258,17 +258,17 @@ h1, h2, h3, .title, .card-title {
     border: 2px dashed var(--text-muted);
 }
 
-.card.luxury {
+.card.point {
     background: linear-gradient(135deg, var(--emerald-light), var(--emerald));
     border: 2px solid var(--gold);
 }
 
-.card.prestige {
+.card.multiplier {
     background: linear-gradient(135deg, #4b0082, #29004d);
     border: 2px solid var(--gold-light);
 }
 
-.card.disgrace {
+.card.penalty {
     background: linear-gradient(135deg, var(--danger), #4a1111);
     border: 2px solid #ff4444;
 }
@@ -368,9 +368,9 @@ h1, h2, h3, .title, .card-title {
     border-radius: 4px;
     background: rgba(255,255,255,0.1);
 }
-.mini-card.luxury { background: var(--emerald); color: white; }
-.mini-card.prestige { background: #4b0082; color: white;}
-.mini-card.disgrace { background: var(--danger); color: white; }
+.mini-card.point { background: var(--emerald); color: white; }
+.mini-card.multiplier { background: #4b0082; color: white;}
+.mini-card.penalty { background: var(--danger); color: white; }
 
 /* Action Panel */
 #action-panel {

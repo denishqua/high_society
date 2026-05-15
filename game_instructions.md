@@ -13,20 +13,20 @@
 
 ### Status Cards (Auction Deck)
 * **Total:** 16 cards, drawn one by one to act as the auction targets.
-* **Luxury Cards (10 total):**
+* **Point Cards (10 total):**
     * Values: `1, 2, 3, 4, 5, 6, 7, 8, 9, 10`.
     * Effect: Adds the face value to the player's final score.
-* **Prestige Cards (3 total):**
+* **Multiplier Cards (3 total):**
     * Values: `x2` (Multiplier).
     * Effect: Doubles the player's final score.
     * **State Tag:** `[End-Game Trigger]` (Historically marked with a dark green background).
-* **Disgrace Cards (3 total):**
+* **Penalty Cards (3 total):**
     * **Faux Pas / Passé:** Subtracts `5` points from the player's final score.
-    * **Theft / Forgery:** Forces the player to discard one of their acquired Luxury Cards. If the player has no Luxury Cards at the time this is acquired, the player's next acquired Luxury Card will be discarded instead.
+    * **Theft / Forgery:** Forces the player to discard one of their acquired Point Cards. If the player has no Point Cards at the time this is acquired, the player's next acquired Point Card will be discarded instead.
     * **Scandale:** Halves the player's final score (divide by 2).
     * **State Tag (Scandale Only):** `[End-Game Trigger]`.
 
-*(Note: There are exactly 4 cards in the deck with the `[End-Game Trigger]` tag: the 3 Prestige Cards and the 1 Scandale Card).*
+*(Note: There are exactly 4 cards in the deck with the `[End-Game Trigger]` tag: the 3 Multiplier Cards and the 1 Scandale Card).*
 
 ---
 
@@ -40,7 +40,7 @@
 ## 3. Core Gameplay Loop (The Auction)
 The game proceeds in rounds. At the start of a round, reveal the top card of the Auction Deck. The auction type depends on the revealed card.
 
-### A. Positive Auctions (Luxury & Prestige Cards)
+### A. Positive Auctions (Point & Multiplier Cards)
 * **Goal:** Players bid to **win** the card.
 * **Turn Logic:**
     1.  The starting player begins by either making a bid or passing.
@@ -53,15 +53,15 @@ The game proceeds in rounds. At the start of a round, reveal the top card of the
     * **Note:** If everyone else passes (e.g., the first players all pass), the last remaining player automatically wins the card for free (a bid of 0).
     * The winning player becomes the starting player for the next round.
 
-### B. Negative Auctions (Disgrace Cards)
+### B. Negative Auctions (Penalty Cards)
 * **Goal:** Players bid to **avoid** the card.
 * **Turn Logic:**
     1.  Bidding proceeds exactly as in a Positive Auctions, with players laying down Money Cards to increase the bid and stay in the round.
 * **Resolution:**
     * The auction ends the moment the **first player passes**.
-    * The player who passes **receives** the Disgrace Card and places it in their tableau.
+    * The player who passes **receives** the Penalty Card and places it in their tableau.
     * **Important Constraint:** The player who passed gets to take their bid Money Cards *back into their hand*. All other players (who successfully avoided the card) must **discard** the Money Cards they had on the table.
-    * The player who took the Disgrace Card becomes the starting player for the next round.
+    * The player who took the Penalty Card becomes the starting player for the next round.
 
 ---
 
@@ -81,12 +81,12 @@ The game proceeds in rounds. At the start of a round, reveal the top card of the
 ### Phase 2: Final Scoring (For Remaining Players)
 For the players who survived elimination, calculate their final score sequentially:
 
-1.  **Base Score:** Sum the values of all acquired Luxury Cards.
-2.  **Apply Flat Penalty:** Subtract `5` if the player holds the *Faux Pas / Passé* Disgrace Card. *(Note: Base scores can drop below zero).*
-3.  **Apply Multipliers:** Multiply the current score by `2` for every Prestige Card held. (e.g., 1 card = x2, 2 cards = x4, 3 cards = x8).
-4.  **Apply Divisors:** If the player holds the *Scandale* Disgrace Card, divide the final total by `2` (standard logic rounds up to the nearest integer).
+1.  **Base Score:** Sum the values of all acquired Point Cards.
+2.  **Apply Flat Penalty:** Subtract `5` if the player holds the *Faux Pas / Passé* Penalty Card. *(Note: Base scores can drop below zero).*
+3.  **Apply Multipliers:** Multiply the current score by `2` for every Multiplier Card held. (e.g., 1 card = x2, 2 cards = x4, 3 cards = x8).
+4.  **Apply Divisors:** If the player holds the *Scandale* Penalty Card, divide the final total by `2` (standard logic rounds up to the nearest integer).
 
 ### Tie-Breaker Logic
 1.  The non-eliminated player with the highest final score wins.
 2.  If tied, the tied player with the **most unspent money** wins.
-3.  If still tied, the tied player with the **single highest-value Luxury Card** wins.
+3.  If still tied, the tied player with the **single highest-value Point Card** wins.

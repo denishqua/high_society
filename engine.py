@@ -1,6 +1,6 @@
 import random
 import itertools
-from cpu import DefaultHeuristicCPU
+from cpu import AdvancedHeuristicCPU
 
 class StatusCard:
     def __init__(self, name, card_type, value, is_end_game_trigger=False):
@@ -123,7 +123,7 @@ class GameState:
             else:
                 cpu_names = ["Bot Chimington", "Bot Macaque", "Bot Baboon", "Bot Orangutan", "Bot Gorilla"]
                 name = cpu_names[cpu_count % len(cpu_names)]
-                self.players.append(Player(i, name, is_cpu=True, cpu_strategy=DefaultHeuristicCPU()))
+                self.players.append(Player(i, name, is_cpu=True, cpu_strategy=AdvancedHeuristicCPU()))
                 cpu_count += 1
             
         self.auction_deck = get_initial_deck()

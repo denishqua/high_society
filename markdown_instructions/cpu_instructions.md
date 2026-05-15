@@ -13,27 +13,34 @@ To execute this strategy, the CPU requires **Perfect Information Tracking**.
 * **`End_Game_Triggers`**: An integer (0-3) tracking how many Prestige + Scandale cards have been revealed.
 * **`Player_Scores`**: A real-time calculation of every player's current points (Luxury sum - Faux Pas + Prestige Multipliers / Scandale Divisors).
 * **`Financial_Rank`**: The CPU's rank based on total remaining money (1st = richest, Last = poorest).
+* **`Player_Count`**: The number of active players (3 to 5).
 
 ---
 
 ## 2. Base Valuation Logic (`Max_Bid` Calculation)
 Before any tactical overrides, the CPU calculates a base `Max_Bid` for the current Status Card. It will never bid above this threshold unless an override dictates it.
 
+### Bidding Multiplier (Scaled by Player Count)
+More players mean more competition, less money to go around per person, and higher average winning bids for critical cards. The base valuation scales accordingly:
+* **`Base_Multiplier`** = `1.5 + ((Player_Count - 3) * 0.25)` 
+  *(e.g., 3 players = 1.5x, 4 players = 1.75x, 5 players = 2.0x)*
+
 ### A. Positive Auctions (Bid to Win)
 * **Luxury Cards (Values 1-10):**
-    * `Max_Bid` = `Face Value * 1.5`
+    * `Max_Bid` = `Face Value * Base_Multiplier`
 * **Prestige Cards (x2 Multiplier):**
-    * `Max_Bid` = `CPU_Current_Score * 1.5`
-    * *Exception:* If `CPU_Current_Score <= 0`, `Max_Bid = 0`.
+    * The `x2` multiplies the *final* score, meaning acquiring it early when a score is 0 or negative is still highly valuable for future point acquisitions.
+    * `Estimated_Value` = `max(CPU_Current_Score, 10)` *(Assumes the CPU will score at least 10 base points by the end of the game)*
+    * `Max_Bid` = `Estimated_Value * Base_Multiplier`
 
 ### B. Negative Auctions (Bid to Avoid)
 * **Faux Pas (-5 points):** 
-    * `Max_Bid = 8` money.
+    * `Max_Bid = 8 * (Player_Count / 3)` money.
 * **Theft / Forgery (Discard a Point Card):** 
-    * Identify the CPU's highest acquired Luxury Card. `Max_Bid` = `Highest_Card_Value * 1.5`.
-    * *Exception:* If no Point Cards, `Max_Bid = 0`.
+    * Identify the CPU's highest acquired Luxury Card. `Max_Bid` = `Highest_Card_Value * Base_Multiplier`.
+    * *Exception:* If no Point Cards, the CPU will lose its *next* acquired Point Card. `Max_Bid` = `5 * Base_Multiplier` (Estimating the average future card lost).
 * **Scandale (/2 Divisor):** 
-    * `Max_Bid` = `(CPU_Current_Score / 2) * 1.5`. 
+    * `Max_Bid` = `max(CPU_Current_Score / 2, 5) * Base_Multiplier`. 
 
 ---
 
@@ -44,7 +51,7 @@ Before generating a bid, the CPU checks if the game state triggers any specializ
 **Trigger Conditions (Any):**
 * Card is **Faux Pas** AND CPU score <= 0.
 * Card is **Scandale** AND CPU score <= 3.
-* Card is **Theft/Forgery** AND CPU's highest card <= 3 (or CPU has no point cards).
+* Card is **Theft/Forgery** AND CPU's highest currently held point card is <= 3. *(Note: If CPU has 0 point cards, do NOT trigger this override, as the penalty will apply to a potentially high-value future card).*
 
 **Execution (The Bluff):**
 1. CPU sets a `Safe_Bluff_Limit` of `4` to `6` total money.
@@ -64,7 +71,7 @@ Before generating a bid, the CPU checks if the game state triggers any specializ
 
 ### Tactic 3: The Poverty Trap & Catch-Up (State Dependent)
 **Trigger Condition: Catch-Up (Highest Priority)**
-* If the CPU is losing on points (trailing the leader by > 7 points): Apply a **Desperation Multiplier** (`2.0` instead of `1.5`) to `Max_Bid` for Positive Auctions. Ignore opponent financial states. 
+* If the CPU is losing on points (trailing the leader by > 7 points): Apply a **Desperation Multiplier** (e.g., `Base_Multiplier + 0.5`) to `Max_Bid` for Positive Auctions. Ignore opponent financial states. 
 
 **Trigger Condition: Poverty Trap (Late Game)**
 * If `End_Game_Triggers >= 1` AND CPU is highly competitive in points AND one specific opponent has significantly lower money than everyone else (The Target).

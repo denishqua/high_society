@@ -17,8 +17,8 @@
     * Values: `1, 2, 3, 4, 5, 6, 7, 8, 9, 10`.
     * Effect: Adds the face value to the player's final score.
 * **Multiplier Cards (3 total):**
-    * Values: `x2` (Multiplier).
-    * Effect: Doubles the player's final score.
+    * Values: `x3` (Multiplier).
+    * Effect: Triples the player's final score.
     * **State Tag:** `[End-Game Trigger]` (Historically marked with a dark green background).
 * **Penalty Cards (3 total):**
     * **Faux Pas / Passé:** Subtracts `5` points from the player's final score.
@@ -83,7 +83,7 @@ For the players who survived elimination, calculate their final score sequential
 
 1.  **Base Score:** Sum the values of all acquired Point Cards.
 2.  **Apply Flat Penalty:** Subtract `5` if the player holds the *Faux Pas / Passé* Penalty Card. *(Note: Base scores can drop below zero).*
-3.  **Apply Multipliers:** Multiply the current score by `2` for every Multiplier Card held. (e.g., 1 card = x2, 2 cards = x4, 3 cards = x8).
+3.  **Apply Multipliers:** Multiply the current score by `3` for every Multiplier Card held. (e.g., 1 card = x3, 2 cards = x9, 3 cards = x27).
 4.  **Apply Divisors:** If the player holds the *Scandale* Penalty Card, divide the final total by `2` (standard logic rounds up to the nearest integer).
 
 ### Tie-Breaker Logic

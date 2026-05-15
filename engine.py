@@ -32,9 +32,9 @@ def get_initial_deck():
         StatusCard("Point 8", "point", 8),
         StatusCard("Point 9", "point", 9),
         StatusCard("Point 10", "point", 10),
-        StatusCard("Multiplier 1", "multiplier", 2, True),
-        StatusCard("Multiplier 2", "multiplier", 2, True),
-        StatusCard("Multiplier 3", "multiplier", 2, True),
+        StatusCard("Multiplier 1", "multiplier", 3, True),
+        StatusCard("Multiplier 2", "multiplier", 3, True),
+        StatusCard("Multiplier 3", "multiplier", 3, True),
         StatusCard("Faux Pas", "penalty", -5),
         StatusCard("Theft", "penalty", "discard_point"),
         StatusCard("Scandale", "penalty", "halve_score", True)
@@ -66,7 +66,7 @@ class Player:
             base -= 5
             
         multiplier_count = sum(1 for c in self.tableau if c.type == 'multiplier')
-        score = base * (2 ** multiplier_count)
+        score = base * (3 ** multiplier_count)
         
         if any(c.name == "Scandale" for c in self.tableau):
             import math
@@ -323,7 +323,7 @@ class GameState:
                 base -= 5
                 
             multiplier_count = sum(1 for c in p.tableau if c.type == 'multiplier')
-            score = base * (2 ** multiplier_count)
+            score = base * (3 ** multiplier_count)
             
             if any(c.name == "Scandale" for c in p.tableau):
                 import math
@@ -393,11 +393,11 @@ if __name__ == "__main__":
     test_deck = [
         StatusCard("Scandale", "penalty", "halve_score", True), # 4th end game
         StatusCard("Point 10", "point", 10),
-        StatusCard("Multiplier 3", "multiplier", 2, True), # 3rd
+        StatusCard("Multiplier 3", "multiplier", 3, True), # 3rd
         StatusCard("Faux Pas", "penalty", -5),
-        StatusCard("Multiplier 2", "multiplier", 2, True), # 2nd
-        StatusCard("Point 5", "point", 5),
-        StatusCard("Multiplier 1", "multiplier", 2, True), # 1st
+        StatusCard("Multiplier 2", "multiplier", 3, True), # 2nd
+        StatusCard("Theft", "penalty", 0),
+        StatusCard("Multiplier 1", "multiplier", 3, True), # 1st
     ]
     game.auction_deck = test_deck
     game.end_game_triggers_revealed = 0

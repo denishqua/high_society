@@ -250,9 +250,8 @@ document.addEventListener('DOMContentLoaded', () => {
             return { title: 'Point', displayValue: card.value, symbol: card.value };
         }
         
-        // Handle Multiplier (multiplier) cards
         if (card.type === 'multiplier') {
-            return { title: 'Multiplier', displayValue: 'x2', symbol: 'x2' };
+            return { title: 'Multiplier', displayValue: 'x3', symbol: 'x3' };
         }
         
         // Handle Penalty (negative) cards

@@ -47,8 +47,8 @@ body {
 }
 
 .container {
-    width: 95%;
-    max-width: 1400px;
+    width: 98%;
+    max-width: 1800px;
     height: 95vh;
     display: flex;
     flex-direction: column;
@@ -314,7 +314,7 @@ h1, h2, h3, .title, .card-title {
 /* Players Dashboard */
 #players-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
     gap: 1.5rem;
     margin-top: 1rem;
 }

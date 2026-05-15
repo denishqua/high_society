@@ -1,4 +1,6 @@
 import random
+import itertools
+from cpu import DefaultHeuristicCPU
 
 class StatusCard:
     def __init__(self, name, card_type, value, is_end_game_trigger=False):
@@ -41,10 +43,11 @@ def get_initial_deck():
 MONEY_CARDS = [1, 2, 3, 4, 5, 8, 10, 12, 15, 20, 25]
 
 class Player:
-    def __init__(self, player_id, name, is_cpu=False):
+    def __init__(self, player_id, name, is_cpu=False, cpu_strategy=None):
         self.id = player_id
         self.name = name
         self.is_cpu = is_cpu
+        self.cpu_strategy = cpu_strategy
         self.hand = list(MONEY_CARDS)
         self.tableau = []
         self.current_bid = []
@@ -120,7 +123,7 @@ class GameState:
             else:
                 cpu_names = ["Bot Chimington", "Bot Macaque", "Bot Baboon", "Bot Orangutan", "Bot Gorilla"]
                 name = cpu_names[cpu_count % len(cpu_names)]
-                self.players.append(Player(i, name, is_cpu=True))
+                self.players.append(Player(i, name, is_cpu=True, cpu_strategy=DefaultHeuristicCPU()))
                 cpu_count += 1
             
         self.auction_deck = get_initial_deck()
@@ -296,64 +299,8 @@ class GameState:
         if not p.is_cpu or p.has_passed:
             return
             
-        card = self.current_auction_card
-        highest_bid = self.get_highest_bid()
-        num_players = len(self.players)
-        
-        if self.auction_type == 'positive':
-            # Smarter: scale willingness directly by card value and player count
-            player_multiplier = num_players / 2.0
-            
-            if card.type == 'multiplier':
-                max_willing = 15 * player_multiplier
-            else:
-                max_willing = card.value * player_multiplier
-                
-            # Prevent bidding more than we actually have
-            if max_willing > p.total_money():
-                max_willing = p.total_money()
-                
-            import itertools
-            valid_combos = []
-            for i in range(1, 4): # max 3 cards
-                for combo in itertools.combinations(p.hand, i):
-                    total = p.bid_total() + sum(combo)
-                    if total > highest_bid and total <= max_willing:
-                        valid_combos.append(list(combo))
-                        
-            if valid_combos:
-                # Prioritize combinations with the lowest bid amount, but penalize using multiple cards
-                # because having spare change (more cards) is useful. We implicitly value a card at ~2.5 bananas.
-                valid_combos.sort(key=lambda x: sum(x) + len(x) * 2.5)
-                self.bid(self.current_player_index, valid_combos[0])
-            else:
-                self.pass_auction(self.current_player_index)
-        else:
-            # Negative auction
-            max_avoidance_bid = 5
-            if card.name == 'Scandale':
-                max_avoidance_bid = 15 # Worth fighting to avoid
-            elif card.name == 'Theft':
-                max_avoidance_bid = 10
-            elif card.name == 'Faux Pas':
-                max_avoidance_bid = 6
-                
-            # Still cap at ~30% of total money to avoid going broke early for a penalty
-            if highest_bid >= max_avoidance_bid or highest_bid >= p.total_money() * 0.3:
-                self.pass_auction(self.current_player_index)
-            else:
-                # find smallest card to bid
-                hand_sorted = sorted(p.hand)
-                valid_card = None
-                for c in hand_sorted:
-                    if p.bid_total() + c > highest_bid:
-                        valid_card = c
-                        break
-                
-                if valid_card:
-                    self.bid(self.current_player_index, [valid_card])
-                else:
-                    self.pass_auction(self.current_player_index)
+        if p.cpu_strategy:
+            p.cpu_strategy.execute_turn(self, self.current_player_index)
 
     def end_game(self):
         self.status = "finished"

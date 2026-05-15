@@ -290,7 +290,9 @@ class GameState:
                         valid_combos.append(list(combo))
                         
             if valid_combos:
-                valid_combos.sort(key=lambda x: sum(x))
+                # Prioritize combinations with the lowest bid amount, but penalize using multiple cards
+                # because having spare change (more cards) is useful. We implicitly value a card at ~2.5 bananas.
+                valid_combos.sort(key=lambda x: sum(x) + len(x) * 2.5)
                 self.bid(self.current_player_index, valid_combos[0])
             else:
                 self.pass_auction(self.current_player_index)

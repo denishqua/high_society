@@ -100,8 +100,8 @@ class GameState:
         self.game_log = []
         self.last_round_result = None
 
-    def log(self, msg):
-        self.game_log.append(msg)
+    def log(self, msg, log_type='info'):
+        self.game_log.append({"msg": msg, "type": log_type})
         print(msg)
 
     def start_game(self, num_human, num_cpu, player_names=None):
@@ -128,7 +128,7 @@ class GameState:
         self.starting_player_index = random.randint(0, num_players - 1)
         self.status = "in_progress"
         self.end_game_triggers_revealed = 0
-        self.log(f"Game started with {num_players} players.")
+        self.log(f"Game started with {num_players} players.", "start")
         
         self.start_round()
 
@@ -142,12 +142,12 @@ class GameState:
             return
 
         self.current_auction_card = self.auction_deck.pop()
-        self.log(f"Round started. Card revealed: {self.current_auction_card.name}")
+        self.log(f"Round started. Card revealed: {self.current_auction_card.name}", "start")
         
         if self.current_auction_card.is_end_game_trigger:
             self.end_game_triggers_revealed += 1
             if self.end_game_triggers_revealed == 4:
-                self.log("4th End Game trigger revealed. Game ends immediately!")
+                self.log("4th End Game trigger revealed. Game ends immediately!", "danger")
                 self.end_game()
                 return
 
@@ -158,7 +158,7 @@ class GameState:
             
         self.status = "in_progress"
         self.current_player_index = self.starting_player_index
-        self.log(f"{self.players[self.current_player_index].name} starts the bidding.")
+        self.log(f"{self.players[self.current_player_index].name} starts the bidding.", "info")
 
     def get_highest_bid(self):
         return max([p.bid_total() for p in self.players], default=0)
@@ -204,7 +204,7 @@ class GameState:
             p.hand.remove(c)
             p.current_bid.append(c)
             
-        self.log(f"{p.name} adds {added_cards} for a total bid of {new_bid}.")
+        self.log(f"{p.name} adds {added_cards} for a total bid of {new_bid}.", "bid")
         self.next_player()
 
     def pass_auction(self, player_index):
@@ -219,7 +219,7 @@ class GameState:
             raise ValueError("Not this player's turn")
 
         p.has_passed = True
-        self.log(f"{p.name} passes.")
+        self.log(f"{p.name} passes.", "pass")
         
         if self.auction_type == 'positive':
             # Reclaim money
@@ -230,11 +230,11 @@ class GameState:
             active_players = [pl for pl in self.players if not pl.has_passed]
             if len(active_players) == 1:
                 winner = active_players[0]
-                self.log(f"{winner.name} wins {self.current_auction_card.name} for {winner.bid_total()}!")
+                self.log(f"{winner.name} wins {self.current_auction_card.name} for {winner.bid_total()}!", "win")
                 
                 if self.current_auction_card.type == 'point' and winner.pending_theft > 0:
                     winner.pending_theft -= 1
-                    self.log(f"Pending Theft triggers! {winner.name}'s new {self.current_auction_card.name} is immediately discarded.")
+                    self.log(f"Pending Theft triggers! {winner.name}'s new {self.current_auction_card.name} is immediately discarded.", "danger")
                 else:
                     winner.tableau.append(self.current_auction_card)
                 
@@ -260,7 +260,7 @@ class GameState:
             p.current_bid = []
             
             p.tableau.append(self.current_auction_card)
-            self.log(f"{p.name} takes {self.current_auction_card.name} and reclaims their bid.")
+            self.log(f"{p.name} takes {self.current_auction_card.name} and reclaims their bid.", "win")
             
             if self.current_auction_card.name == "Theft":
                  point_cards = [c for c in p.tableau if c.type == 'point']
@@ -269,10 +269,10 @@ class GameState:
                      point_cards.sort(key=lambda c: c.value, reverse=True)
                      discarded = point_cards[0]
                      p.tableau.remove(discarded)
-                     self.log(f"Theft triggers! {p.name} discards {discarded.name}.")
+                     self.log(f"Theft triggers! {p.name} discards {discarded.name}.", "danger")
                  else:
                      p.pending_theft += 1
-                     self.log(f"Theft triggers, but {p.name} has no point_cards! A pending theft is added.")
+                     self.log(f"Theft triggers, but {p.name} has no point_cards! A pending theft is added.", "danger")
             
             # Everyone else discards their bid
             for other_p in self.players:

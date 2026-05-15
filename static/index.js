@@ -375,7 +375,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Live Log
         if (gameState.game_log) {
-            const logHTML = gameState.game_log.map(msg => `<div style="margin-bottom: 4px; padding-bottom: 4px; border-bottom: 1px solid rgba(255,255,255,0.1);">${msg}</div>`).join('');
+            const logHTML = gameState.game_log.map(entry => {
+                let color = "var(--text-main)";
+                if (entry.type === "bid") color = "var(--gold-light)";
+                else if (entry.type === "pass") color = "var(--text-muted)";
+                else if (entry.type === "win") color = "var(--emerald-light)";
+                else if (entry.type === "danger") color = "var(--danger)";
+                else if (entry.type === "start") color = "var(--gold)";
+                return `<div style="margin-bottom: 4px; padding-bottom: 4px; border-bottom: 1px solid rgba(255,255,255,0.1); color: ${color};">${entry.msg}</div>`;
+            }).join('');
             if (logContent.innerHTML !== logHTML) {
                 logContent.innerHTML = logHTML;
                 logContent.scrollTop = logContent.scrollHeight;
@@ -399,7 +407,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (selectedCards.includes(val)) cardEl.classList.add('selected'); // Try to persist selection
             
             cardEl.innerHTML = `
-                <span class="card-title">Banana</span>
+                <span class="card-title">🍌</span>
                 <span class="card-value">${val}</span>
             `;
             
@@ -455,7 +463,15 @@ document.addEventListener('DOMContentLoaded', () => {
         // Display final log
         const finalLogContainer = document.getElementById('final-log');
         if (finalLogContainer && gameState.game_log) {
-            finalLogContainer.innerHTML = gameState.game_log.map(msg => `<div>${msg}</div>`).join('');
+            finalLogContainer.innerHTML = gameState.game_log.map(entry => {
+                let color = "var(--text-main)";
+                if (entry.type === "bid") color = "var(--gold-light)";
+                else if (entry.type === "pass") color = "var(--text-muted)";
+                else if (entry.type === "win") color = "var(--emerald-light)";
+                else if (entry.type === "danger") color = "var(--danger)";
+                else if (entry.type === "start") color = "var(--gold)";
+                return `<div style="color: ${color};">${entry.msg}</div>`;
+            }).join('');
             finalLogContainer.scrollTop = finalLogContainer.scrollHeight;
         }
     }

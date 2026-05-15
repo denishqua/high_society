@@ -41,13 +41,15 @@ def get_initial_deck():
 MONEY_CARDS = [1, 2, 3, 4, 5, 8, 10, 12, 15, 20, 25]
 
 class Player:
-    def __init__(self, player_id, name):
+    def __init__(self, player_id, name, is_cpu=False):
         self.id = player_id
         self.name = name
+        self.is_cpu = is_cpu
         self.hand = list(MONEY_CARDS)
         self.tableau = []
         self.current_bid = []
         self.has_passed = False
+        self.pending_theft = 0
 
     def bid_total(self):
         return sum(self.current_bid)
@@ -64,7 +66,9 @@ class Player:
             'current_bid': self.current_bid,
             'has_passed': self.has_passed,
             'bid_total': self.bid_total(),
-            'total_money': self.total_money()
+            'total_money': self.total_money(),
+            'pending_theft': self.pending_theft,
+            'is_cpu': self.is_cpu
         }
 
 class GameState:
@@ -78,19 +82,30 @@ class GameState:
         self.auction_type = None  # 'positive' or 'negative'
         self.status = "not_started"
         self.game_log = []
+        self.game_results = None
 
     def log(self, msg):
         self.game_log.append(msg)
         print(msg)
 
-    def start_game(self, num_players, player_names=None):
+    def start_game(self, num_human, num_cpu, player_names=None):
+        num_players = num_human + num_cpu
         if not (3 <= num_players <= 5):
             raise ValueError("Player count must be 3-5")
         
         self.players = []
+        human_count = 0
+        cpu_count = 0
         for i in range(num_players):
-            name = player_names[i] if player_names and i < len(player_names) else f"Player {i+1}"
-            self.players.append(Player(i, name))
+            if human_count < num_human:
+                name = player_names[i] if player_names and i < len(player_names) else f"Player {human_count+1}"
+                self.players.append(Player(i, name, is_cpu=False))
+                human_count += 1
+            else:
+                cpu_names = ["Bot Chimington", "Bot Macaque", "Bot Baboon", "Bot Orangutan", "Bot Gorilla"]
+                name = cpu_names[cpu_count % len(cpu_names)]
+                self.players.append(Player(i, name, is_cpu=True))
+                cpu_count += 1
             
         self.auction_deck = get_initial_deck()
         random.shuffle(self.auction_deck)
@@ -199,7 +214,13 @@ class GameState:
             if len(active_players) == 1:
                 winner = active_players[0]
                 self.log(f"{winner.name} wins {self.current_auction_card.name} for {winner.bid_total()}!")
-                winner.tableau.append(self.current_auction_card)
+                
+                if self.current_auction_card.type == 'luxury' and winner.pending_theft > 0:
+                    winner.pending_theft -= 1
+                    self.log(f"Pending Theft triggers! {winner.name}'s new {self.current_auction_card.name} is immediately discarded.")
+                else:
+                    winner.tableau.append(self.current_auction_card)
+                
                 # Money is discarded
                 winner.current_bid = [] 
                 self.starting_player_index = self.players.index(winner)
@@ -223,6 +244,9 @@ class GameState:
                      discarded = luxuries[0]
                      p.tableau.remove(discarded)
                      self.log(f"Theft triggers! {p.name} discards {discarded.name}.")
+                 else:
+                     p.pending_theft += 1
+                     self.log(f"Theft triggers, but {p.name} has no luxuries! A pending theft is added.")
             
             # Everyone else discards their bid
             for other_p in self.players:
@@ -231,6 +255,52 @@ class GameState:
                     
             self.starting_player_index = player_index
             self.start_round()
+
+    def execute_cpu_turn(self):
+        if self.status != "in_progress":
+            return
+            
+        p = self.players[self.current_player_index]
+        if not p.is_cpu or p.has_passed:
+            return
+            
+        card = self.current_auction_card
+        highest_bid = self.get_highest_bid()
+        
+        if self.auction_type == 'positive':
+            # Max willing to spend
+            max_willing = p.total_money() * 0.25 if (card.type == 'prestige' or card.value >= 5) else p.total_money() * 0.10
+            
+            import itertools
+            valid_combos = []
+            for i in range(1, 4): # max 3 cards
+                for combo in itertools.combinations(p.hand, i):
+                    total = p.bid_total() + sum(combo)
+                    if total > highest_bid and total <= max_willing:
+                        valid_combos.append(list(combo))
+                        
+            if valid_combos:
+                valid_combos.sort(key=lambda x: sum(x))
+                self.bid(self.current_player_index, valid_combos[0])
+            else:
+                self.pass_auction(self.current_player_index)
+        else:
+            # Negative auction
+            if highest_bid >= 5:
+                self.pass_auction(self.current_player_index)
+            else:
+                # find smallest card to bid
+                hand_sorted = sorted(p.hand)
+                valid_card = None
+                for c in hand_sorted:
+                    if p.bid_total() + c > highest_bid:
+                        valid_card = c
+                        break
+                
+                if valid_card:
+                    self.bid(self.current_player_index, [valid_card])
+                else:
+                    self.pass_auction(self.current_player_index)
 
     def end_game(self):
         self.status = "finished"
@@ -264,6 +334,7 @@ class GameState:
             
         if not remaining_players:
             self.log("All players eliminated!")
+            self.game_results = {'rankings': [], 'eliminated': [p.to_dict() for p in eliminated_players]}
             return []
             
         # Tie-breaker logic
@@ -274,7 +345,17 @@ class GameState:
         remaining_players.sort(key=sort_key, reverse=True)
         winner = remaining_players[0]
         self.log(f"WINNER: {winner.name}!")
-        return [p.to_dict() for p in remaining_players]
+        
+        self.game_results = {
+            'rankings': [],
+            'eliminated': [p.to_dict() for p in eliminated_players]
+        }
+        for p in remaining_players:
+            p_dict = p.to_dict()
+            p_dict['final_score'] = scores[p]
+            self.game_results['rankings'].append(p_dict)
+            
+        return self.game_results['rankings']
 
     def get_state(self):
         return {
@@ -284,7 +365,8 @@ class GameState:
             'end_game_triggers_revealed': self.end_game_triggers_revealed,
             'current_player_index': self.current_player_index,
             'starting_player_index': self.starting_player_index,
-            'players': [p.to_dict() for p in self.players]
+            'players': [p.to_dict() for p in self.players],
+            'game_results': self.game_results
         }
 
 if __name__ == "__main__":

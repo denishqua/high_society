@@ -22,7 +22,7 @@
     * **State Tag:** `[End-Game Trigger]` (Historically marked with a dark green background).
 * **Disgrace Cards (3 total):**
     * **Faux Pas / Passé:** Subtracts `5` points from the player's final score.
-    * **Theft / Forgery:** Forces the player to discard one of their acquired Luxury Cards. If the player has no Luxury Cards at the time this is acquired, it has no effect and is discarded.
+    * **Theft / Forgery:** Forces the player to discard one of their acquired Luxury Cards. If the player has no Luxury Cards at the time this is acquired, the player's next acquired Luxury Card will be discarded instead.
     * **Scandale:** Halves the player's final score (divide by 2).
     * **State Tag (Scandale Only):** `[End-Game Trigger]`.
 
@@ -50,6 +50,7 @@ The game proceeds in rounds. At the start of a round, reveal the top card of the
 * **Resolution:**
     * Bidding continues clockwise until all players but one have passed.
     * The remaining player **wins** the Status Card, places it face-up in their tableau, and **discards** the Money Cards they bid.
+    * **Note:** If everyone else passes (e.g., the first players all pass), the last remaining player automatically wins the card for free (a bid of 0).
     * The winning player becomes the starting player for the next round.
 
 ### B. Negative Auctions (Disgrace Cards)

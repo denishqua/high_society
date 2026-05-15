@@ -3,23 +3,102 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>High Society</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <title>High Society: The Ape Aristocracy</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/index.css">
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>High Society</h1>
-            <p>Welcome to your new premium web application.</p>
-        </header>
-        <main>
-            <div class="card">
-                <h2>Ready to play</h2>
-                <p>This is a starting point for the High Society project.</p>
-                <button class="primary-btn">Get Started</button>
+    <div class="background-overlay"></div>
+    
+    <div id="app" class="container">
+        <!-- Setup Screen -->
+        <section id="setup-screen" class="glass-panel active">
+            <h1 class="title">The Ape Aristocracy</h1>
+            <p class="subtitle">A game of High Society</p>
+            
+            <div class="setup-controls">
+                <div class="player-inputs">
+                    <div class="input-group">
+                        <label for="human-count">Human Players:</label>
+                        <input type="number" id="human-count" value="1" min="0" max="5">
+                    </div>
+                    <div class="input-group">
+                        <label for="cpu-count">Computer Players:</label>
+                        <input type="number" id="cpu-count" value="2" min="0" max="5">
+                    </div>
+                </div>
+                <p id="setup-error" class="error-text hidden">Total players must be between 3 and 5.</p>
+                <button id="btn-start" class="btn-primary">Open the Ballroom</button>
             </div>
-        </main>
+        </section>
+
+        <!-- Game Screen -->
+        <section id="game-screen" class="hidden">
+            <div class="game-layout">
+                
+                <!-- Left Column: Auction & Log -->
+                <div class="left-col">
+                    <div id="auction-center" class="glass-panel">
+                        <h2>Current Auction</h2>
+                        <div id="auction-card" class="card empty">
+                            <span class="card-title">Waiting...</span>
+                        </div>
+                        <div id="auction-info">
+                            <p class="auction-type"></p>
+                        </div>
+                    </div>
+                    
+                    <div id="game-log" class="glass-panel">
+                        <h3>Ballroom Gossip</h3>
+                        <div class="log-content"></div>
+                    </div>
+                </div>
+
+                <!-- Right Column: Players & Action -->
+                <div class="right-col">
+                    <div id="players-dashboard" class="glass-panel">
+                        <h3>The Distinguished Guests</h3>
+                        <div id="players-grid">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+                    
+                    <div id="action-panel" class="glass-panel">
+                        <h3 id="active-player-name">Waiting...</h3>
+                        <p id="action-prompt">It's your turn to act.</p>
+                        
+                        <div id="hand-container" class="hand">
+                            <!-- Populated by JS -->
+                        </div>
+                        
+                        <div class="action-controls">
+                            <div class="bid-summary">
+                                Selected: <span id="selected-bid-total" class="gold-text">0</span> 🍌
+                            </div>
+                            <button id="btn-bid" class="btn-primary">Submit Bid</button>
+                            <button id="btn-pass" class="btn-secondary">Pass</button>
+                        </div>
+                    </div>
+                </div>
+                
+            </div>
+        </section>
+        
+        <!-- Game Over Screen -->
+        <section id="game-over-screen" class="glass-panel hidden">
+            <h1 class="title">The Season Concludes</h1>
+            <h2 id="winner-announcement" class="gold-text"></h2>
+            
+            <div id="final-rankings">
+                <!-- Populated by JS -->
+            </div>
+            
+            <button id="btn-play-again" class="btn-primary">Host Another Soirée</button>
+        </section>
     </div>
+
+    <!-- Scripts -->
+    <script src="/static/index.js"></script>
 </body>
 </html>

@@ -354,7 +354,7 @@ document.addEventListener('DOMContentLoaded', () => {
              row.className = `ranking-row eliminated`;
              row.innerHTML = `
                 <span>ELIMINATED: ${p.name} (Poor!)</span>
-                <span>Money: ${p.total_money} 🍌</span>
+                <span>Score: ${p.final_score} | Money: ${p.total_money} 🍌</span>
             `;
             finalRankings.appendChild(row);
         });

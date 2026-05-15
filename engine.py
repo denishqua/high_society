@@ -338,7 +338,7 @@ class GameState:
         
         # Scoring
         scores = {}
-        for p in remaining_players:
+        for p in self.players:
             base = sum(c.value for c in p.tableau if c.type == 'luxury')
             if any(c.name == "Faux Pas" for c in p.tableau):
                 base -= 5
@@ -351,11 +351,17 @@ class GameState:
                 score = math.ceil(score / 2.0)
                 
             scores[p] = score
-            self.log(f"SCORE: {p.name} scores {score}. (Money: {p.total_money()})")
+            if p in remaining_players:
+                self.log(f"SCORE: {p.name} scores {score}. (Money: {p.total_money()})")
             
         if not remaining_players:
             self.log("All players eliminated!")
-            self.game_results = {'rankings': [], 'eliminated': [p.to_dict() for p in eliminated_players]}
+            eliminated_dicts = []
+            for p in eliminated_players:
+                d = p.to_dict()
+                d['final_score'] = scores[p]
+                eliminated_dicts.append(d)
+            self.game_results = {'rankings': [], 'eliminated': eliminated_dicts}
             return []
             
         # Tie-breaker logic
@@ -367,9 +373,15 @@ class GameState:
         winner = remaining_players[0]
         self.log(f"WINNER: {winner.name}!")
         
+        eliminated_dicts = []
+        for p in eliminated_players:
+            d = p.to_dict()
+            d['final_score'] = scores[p]
+            eliminated_dicts.append(d)
+            
         self.game_results = {
             'rankings': [],
-            'eliminated': [p.to_dict() for p in eliminated_players]
+            'eliminated': eliminated_dicts
         }
         for p in remaining_players:
             p_dict = p.to_dict()

@@ -320,8 +320,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
                 <div class="player-bid">Current Bid: ${bidText}</div>
                 <div class="player-status">${status}</div>
-                <div class="tableau-mini">Luxuries: ${luxuryCards || '<span style="opacity:0.5">None</span>'}</div>
-                <div class="tableau-mini">Status: ${statusCards || '<span style="opacity:0.5">None</span>'}</div>
+                <div class="tableau-mini">Points: ${luxuryCards || '<span style="opacity:0.5">None</span>'}</div>
+                <div class="tableau-mini">Modifiers: ${statusCards || '<span style="opacity:0.5">None</span>'}</div>
             `;
             playersGrid.appendChild(el);
         });

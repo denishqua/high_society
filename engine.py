@@ -366,7 +366,8 @@ class GameState:
             'current_player_index': self.current_player_index,
             'starting_player_index': self.starting_player_index,
             'players': [p.to_dict() for p in self.players],
-            'game_results': self.game_results
+            'game_results': self.game_results,
+            'game_log': self.game_log
         }
 
 if __name__ == "__main__":

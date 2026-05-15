@@ -357,6 +357,13 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
             finalRankings.appendChild(row);
         });
+
+        // Display final log
+        const finalLogContainer = document.getElementById('final-log');
+        if (finalLogContainer && gameState.game_log) {
+            finalLogContainer.innerHTML = gameState.game_log.map(msg => `<div>${msg}</div>`).join('');
+            finalLogContainer.scrollTop = finalLogContainer.scrollHeight;
+        }
     }
 
 });

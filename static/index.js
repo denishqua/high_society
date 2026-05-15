@@ -252,8 +252,12 @@ document.addEventListener('DOMContentLoaded', () => {
             if (card.name === 'Faux Pas') valStr = "-5";
             if (card.name === 'Theft') valStr = "🔪";
 
+            let displayTitle = card.name;
+            if (card.type === 'luxury') displayTitle = "Luxury";
+            if (card.type === 'prestige') displayTitle = "Prestige";
+
             auctionCardEl.innerHTML = `
-                <span class="card-title">${card.name}</span>
+                <span class="card-title">${displayTitle}</span>
                 <span class="card-value">${valStr}</span>
                 ${card.is_end_game_trigger ? '<br><small>[End Game Trigger]</small>' : ''}
             `;
@@ -272,8 +276,15 @@ document.addEventListener('DOMContentLoaded', () => {
             else if (isActive) status = 'Thinking...';
             else status = 'Waiting';
 
-            let luxuryCards = p.tableau.filter(c => c.type === 'luxury').map(c => `<span class="mini-card luxury">${c.name}</span>`).join('');
-            let statusCards = p.tableau.filter(c => c.type !== 'luxury').map(c => `<span class="mini-card ${c.type}">${c.name}</span>`).join('');
+            let luxuryCards = p.tableau.filter(c => c.type === 'luxury').map(c => `<span class="mini-card luxury">${c.value}</span>`).join('');
+            let statusCards = p.tableau.filter(c => c.type !== 'luxury').map(c => {
+                let name = c.name;
+                if (c.type === 'prestige') name = 'x2';
+                else if (c.name === 'Scandale') name = '÷2';
+                else if (c.name === 'Faux Pas') name = '-5';
+                else if (c.name === 'Theft') name = '🔪';
+                return `<span class="mini-card ${c.type}">${name}</span>`;
+            }).join('');
             if (p.pending_theft > 0) {
                  statusCards += `<span class="mini-card disgrace">Pending Theft (${p.pending_theft})</span>`;
             }

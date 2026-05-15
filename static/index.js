@@ -241,24 +241,38 @@ document.addEventListener('DOMContentLoaded', () => {
         screens[screenId].classList.add('active');
     }
 
+    // --- Helper Functions ---
+    function getCardDisplayInfo(card) {
+        if (!card) return null;
+        
+        // Handle Luxury cards
+        if (card.type === 'luxury') {
+            return { title: 'Luxury', displayValue: card.value, symbol: card.value };
+        }
+        
+        // Handle Prestige (multiplier) cards
+        if (card.type === 'prestige') {
+            return { title: 'Prestige', displayValue: 'x2', symbol: 'x2' };
+        }
+        
+        // Handle Disgrace (negative) cards
+        if (card.name === 'Scandale') return { title: 'Scandale', displayValue: '÷2', symbol: '÷2' };
+        if (card.name === 'Faux Pas') return { title: 'Faux Pas', displayValue: '-5', symbol: '-5' };
+        if (card.name === 'Theft') return { title: 'Theft', displayValue: '🔪', symbol: '🔪' };
+        
+        // Fallback
+        return { title: card.name, displayValue: card.value, symbol: card.name };
+    }
+
     function renderGame() {
-        // Auction Card
+        // Render Central Auction Card
         const card = gameState.current_auction_card;
         if (card) {
+            const cardInfo = getCardDisplayInfo(card);
             auctionCardEl.className = `card ${card.type}`;
-            let valStr = card.value;
-            if (card.type === 'prestige') valStr = "x2";
-            if (card.name === 'Scandale') valStr = "÷2";
-            if (card.name === 'Faux Pas') valStr = "-5";
-            if (card.name === 'Theft') valStr = "🔪";
-
-            let displayTitle = card.name;
-            if (card.type === 'luxury') displayTitle = "Luxury";
-            if (card.type === 'prestige') displayTitle = "Prestige";
-
             auctionCardEl.innerHTML = `
-                <span class="card-title">${displayTitle}</span>
-                <span class="card-value">${valStr}</span>
+                <span class="card-title">${cardInfo.title}</span>
+                <span class="card-value">${cardInfo.displayValue}</span>
                 ${card.is_end_game_trigger ? '<br><small>[End Game Trigger]</small>' : ''}
             `;
             auctionInfoEl.innerHTML = `<p class="auction-type">Type: <strong>${gameState.auction_type === 'positive' ? 'Positive (Win Card)' : 'Negative (Avoid Card)'}</strong></p>`;
@@ -271,29 +285,34 @@ document.addEventListener('DOMContentLoaded', () => {
             const el = document.createElement('div');
             el.className = `player-card ${isActive ? 'active-turn' : ''}`;
             
-            let status = '';
+            // Format Player Status
+            let status = 'Waiting';
             if (p.has_passed) status = 'Passed';
             else if (isActive) status = 'Thinking...';
-            else status = 'Waiting';
 
-            let luxuryCards = p.tableau.filter(c => c.type === 'luxury').map(c => `<span class="mini-card luxury">${c.value}</span>`).join('');
-            let statusCards = p.tableau.filter(c => c.type !== 'luxury').map(c => {
-                let name = c.name;
-                if (c.type === 'prestige') name = 'x2';
-                else if (c.name === 'Scandale') name = '÷2';
-                else if (c.name === 'Faux Pas') name = '-5';
-                else if (c.name === 'Theft') name = '🔪';
-                return `<span class="mini-card ${c.type}">${name}</span>`;
-            }).join('');
+            // Format Player Tableau (split into point-scoring luxuries and modifiers)
+            const luxuryCards = p.tableau
+                .filter(c => c.type === 'luxury')
+                .map(c => `<span class="mini-card luxury">${getCardDisplayInfo(c).symbol}</span>`)
+                .join('');
+                
+            let statusCards = p.tableau
+                .filter(c => c.type !== 'luxury')
+                .map(c => `<span class="mini-card ${c.type}">${getCardDisplayInfo(c).symbol}</span>`)
+                .join('');
+                
+            // Include pending thefts in the status display
             if (p.pending_theft > 0) {
                  statusCards += `<span class="mini-card disgrace">Pending Theft (${p.pending_theft})</span>`;
             }
 
+            // Format Current Bid
             let bidText = `<span class="gold-text">${p.bid_total}</span> 🍌`;
             if (p.current_bid && p.current_bid.length > 0) {
                 bidText += ` <span style="font-size: 0.8em; color: var(--gold-dark);">[${p.current_bid.join(', ')}]</span>`;
             }
 
+            // Construct Player Card HTML
             el.innerHTML = `
                 <div style="display:flex; justify-content:space-between; align-items:center;">
                     <div class="player-name">🐵 ${p.name}</div>

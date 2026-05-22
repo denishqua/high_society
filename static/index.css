@@ -228,6 +228,7 @@ h1, h2, h3, .title, .card-title {
 .right-col {
     display: flex;
     flex-direction: column;
+    justify-content: center;
     gap: 1.25rem;
     height: 100%;
     min-height: 0;
@@ -327,9 +328,9 @@ h1, h2, h3, .title, .card-title {
 
 /* Players Dashboard */
 #players-dashboard {
-    flex: 1;
+    height: 380px;
+    flex-shrink: 0;
     padding: 1.25rem 1.5rem;
-    min-height: 0;
     overflow-y: auto;
 }
 

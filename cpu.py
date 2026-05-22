@@ -57,21 +57,46 @@ class AdvancedHeuristicCPU(CPUStrategy):
             elif card.name == 'Scandale':
                 max_bid = max(my_score / 2, 5) * base_multiplier
 
+        # --- 2.5 Dynamic Risk-Based Bidding (Poverty Avoidance) ---
+        if len(money_list) > 1:
+            is_poorest = (my_money == money_list[-1])
+            is_richest = (my_money == money_list[0])
+            
+            if is_poorest:
+                # We are the poorest player. Drastically reduce max_bid to survive.
+                danger_factor = 0.4 if end_game_triggers >= 2 else 0.7
+                max_bid *= danger_factor
+            elif is_richest:
+                # We are the richest player. Leverage our wealth aggressively.
+                safety_margin = my_money - money_list[1]
+                if safety_margin > 10:
+                    max_bid *= 1.25
+                else:
+                    max_bid *= 1.1
+            else:
+                # Middle of the pack, but if close to poorest, be careful
+                margin_to_poorest = my_money - money_list[-1]
+                if margin_to_poorest <= 5:
+                    danger_factor = 0.6 if end_game_triggers >= 2 else 0.8
+                    max_bid *= danger_factor
+
         # --- 3. Tactical Overrides ---
         tactic_used = None
         
         if game_state.auction_type == 'negative':
-            # Tactic 1: Nothing to Lose Bluff
+            # Tactic 1: Nothing to Lose Bluff (Only if not poorest)
+            is_poorest = len(money_list) > 1 and (my_money == money_list[-1])
             trigger_bluff = False
-            if card.name == 'Faux Pas' and my_score <= 0:
-                trigger_bluff = True
-            elif card.name == 'Scandale' and my_score <= 3:
-                trigger_bluff = True
-            elif card.name == 'Theft':
-                highest_card = max([c.value for c in p.tableau if c.type == 'point'], default=0)
-                has_points = any(c.type == 'point' for c in p.tableau)
-                if has_points and highest_card <= 3:
+            if not is_poorest:
+                if card.name == 'Faux Pas' and my_score <= 0:
                     trigger_bluff = True
+                elif card.name == 'Scandale' and my_score <= 3:
+                    trigger_bluff = True
+                elif card.name == 'Theft':
+                    highest_card = max([c.value for c in p.tableau if c.type == 'point'], default=0)
+                    has_points = any(c.type == 'point' for c in p.tableau)
+                    if has_points and highest_card <= 3:
+                        trigger_bluff = True
                     
             if trigger_bluff:
                 safe_bluff_limit = 5
@@ -97,21 +122,24 @@ class AdvancedHeuristicCPU(CPUStrategy):
                         max_bid = 5 # Deflate
                         tactic_used = "discount"
             
-            # Poverty Trap
-            if end_game_triggers >= 1 and (leader_score - my_score) <= 5:
+            # Poverty Trap (let-them-spend)
+            # If the poorest player is someone else and they have bid significantly,
+            # let them win so they spend their money and get eliminated!
+            if end_game_triggers >= 1 and tactic_used is None:
                 poorest_money = min(money_list)
                 poorest_players = [pl for pl in game_state.players if pl.total_money() == poorest_money]
                 if len(poorest_players) == 1 and poorest_players[0].id != p.id:
                     target = poorest_players[0]
-                    if target.current_bid and sum(c.value for c in target.current_bid) > 0:
-                        max_bid = target.total_money() + 5 # Force them to spend
-                        tactic_used = "poverty-trap"
+                    # If the poorest player has bid more than 15% of their total money
+                    if target.bid_total() > target.total_money() * 0.15:
+                        max_bid = target.bid_total() - 1  # Force ourselves to pass and let them spend
+                        tactic_used = "let-them-spend"
 
         if game_state.auction_type == 'negative' and tactic_used != "bluff" and end_game_triggers >= 1:
-            # Poverty trap for negative
+            # Poverty Avoidance for negative: if we are the poorest player, pass immediately to conserve all money
             poorest_money = min(money_list)
             poorest_players = [pl for pl in game_state.players if pl.total_money() == poorest_money]
-            if len(poorest_players) == 1 and poorest_players[0].id != p.id:
+            if len(poorest_players) == 1 and poorest_players[0].id == p.id:
                 game_state.pass_auction(player_index)
                 return
 
@@ -134,12 +162,16 @@ class AdvancedHeuristicCPU(CPUStrategy):
         # --- 4. Opponent Modeling & Change Denial ---
         target_bid = highest_bid + 1
         
-        # Find next active opponent
+        # Find next active opponent (safely, avoiding infinite loop if no other active player)
         next_idx = (player_index + 1) % num_players
-        while game_state.players[next_idx].has_passed or next_idx == player_index:
+        found_active_opponent = False
+        for _ in range(num_players - 1):
+            if not game_state.players[next_idx].has_passed:
+                found_active_opponent = True
+                break
             next_idx = (next_idx + 1) % num_players
             
-        if next_idx != player_index:
+        if found_active_opponent and next_idx != player_index:
             next_p = game_state.players[next_idx]
             base_opp_bid = next_p.bid_total()
             
@@ -164,6 +196,21 @@ class AdvancedHeuristicCPU(CPUStrategy):
         
         my_current_bid_total = p.bid_total()
         
+        # Calculate dynamic waste tolerance based on card value and hand size
+        card_importance = 1.0
+        if card.type == 'multiplier':
+            card_importance = 2.0
+        elif card.type == 'point':
+            card_importance = card.value / 5.0  # Point 10 -> 2.0, Point 5 -> 1.0, Point 1 -> 0.2
+        elif card.type == 'penalty':
+            card_importance = 1.5
+            
+        waste_tolerance = 5.0 * card_importance
+        
+        # Increase tolerance if hand is small (less options means we have to overpay)
+        if len(p.hand) < 5:
+            waste_tolerance += (5 - len(p.hand)) * 3.0
+        
         # We need sum(combo) + my_current_bid_total >= target_bid
         for r in range(1, min(4, len(p.hand) + 1)):
             for combo in itertools.combinations(p.hand, r):
@@ -178,7 +225,7 @@ class AdvancedHeuristicCPU(CPUStrategy):
                         
         if best_combo is not None:
             waste = (my_current_bid_total + sum(best_combo)) - target_bid
-            if waste > 5:
+            if waste > waste_tolerance:
                 game_state.pass_auction(player_index)
             else:
                 game_state.bid(player_index, best_combo)

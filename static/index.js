@@ -1,4 +1,13 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // --- Constants ---
+    const PLAYER_COLORS = [
+        '#F59E0B', // Honey Gold
+        '#10B981', // Emerald Green
+        '#3B82F6', // Sapphire Blue
+        '#F43F5E', // Ruby Rose
+        '#A78BFA'  // Amethyst Violet
+    ];
+
     // --- State ---
     let humanCount = 1;
     let cpuCount = 2;
@@ -30,6 +39,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const selectedBidTotalEl = document.getElementById('selected-bid-total');
     const btnBid = document.getElementById('btn-bid');
     const btnPass = document.getElementById('btn-pass');
+    
+    // Bid to beat badge elements
+    const bidToBeatBadge = document.getElementById('bid-to-beat-badge');
+    const bidToBeatLabel = document.getElementById('bid-to-beat-label');
+    const bidToBeatValue = document.getElementById('bid-to-beat-value');
     
     // New Round Result UI
     const actionControlsPanel = document.getElementById('action-controls-panel');
@@ -251,7 +265,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         if (card.type === 'multiplier') {
-            return { title: 'Multiplier', displayValue: 'x3', symbol: 'x3' };
+            return { title: 'Multiplier', displayValue: 'x2', symbol: 'x2' };
         }
         
         // Handle Penalty (negative) cards
@@ -281,8 +295,18 @@ document.addEventListener('DOMContentLoaded', () => {
         playersGrid.innerHTML = '';
         gameState.players.forEach((p, idx) => {
             const isActive = idx === gameState.current_player_index;
+            const color = PLAYER_COLORS[p.id % PLAYER_COLORS.length];
             const el = document.createElement('div');
             el.className = `player-card ${isActive ? 'active-turn' : ''}`;
+            
+            // Apply dynamic coloring to player card
+            if (isActive) {
+                el.style.borderColor = color;
+                el.style.boxShadow = `0 0 15px ${color}4d`;
+                el.style.background = `linear-gradient(135deg, ${color}0d, ${color}1a)`;
+            } else {
+                el.style.borderColor = `${color}33`;
+            }
             
             // Format Player Status
             let status = 'Waiting';
@@ -306,15 +330,17 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             // Format Current Bid
-            let bidText = `<span class="gold-text">${p.bid_total}</span> 🍌`;
-            if (p.current_bid && p.current_bid.length > 0) {
-                bidText += ` <span style="font-size: 0.8em; color: var(--gold-dark);">[${p.current_bid.join(', ')}]</span>`;
+            const displayBid = p.display_bid || [];
+            const displayTotal = displayBid.reduce((a, b) => a + b, 0);
+            let bidText = `<span class="gold-text">${displayTotal}</span> 🍌`;
+            if (displayBid.length > 0) {
+                bidText += ` <span style="font-size: 0.8em; color: var(--gold-dark);">[${displayBid.join(', ')}]</span>`;
             }
 
             // Construct Player Card HTML
             el.innerHTML = `
                 <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <div class="player-name">🐵 ${p.name}</div>
+                    <div class="player-name" style="color: ${color}; border-bottom: 1px solid ${color}33;">🐵 ${p.name}</div>
                     <div style="font-size: 0.9em; color: var(--gold-light); font-weight: bold;">Score: ${p.score}</div>
                 </div>
                 <div class="player-bid">Current Bid: ${bidText}</div>
@@ -327,7 +353,33 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Active Player Hand
         const activeP = gameState.players[gameState.current_player_index];
-        activePlayerName.innerText = `Turn: ${activeP.name}`;
+        const activeColor = PLAYER_COLORS[activeP.id % PLAYER_COLORS.length];
+        activePlayerName.innerHTML = `Turn: <span style="color: ${activeColor}; font-weight: bold;">${activeP.name}</span>`;
+        
+        const actionPrompt = document.getElementById('action-prompt');
+        if (actionPrompt) {
+            if (activeP.is_cpu) {
+                actionPrompt.innerText = `${activeP.name} is deciding...`;
+            } else {
+                actionPrompt.innerText = "It's your turn to act.";
+            }
+        }
+
+        // Calculate and display Bid to Beat
+        const highestBid = Math.max(...gameState.players.map(p => p.bid_total));
+        if (gameState.status === 'in_progress' && bidToBeatBadge) {
+            bidToBeatBadge.classList.remove('hidden');
+            bidToBeatValue.innerText = highestBid;
+            if (gameState.auction_type === 'positive') {
+                bidToBeatBadge.classList.remove('negative-auction');
+                bidToBeatLabel.innerText = "Bid to Beat";
+            } else {
+                bidToBeatBadge.classList.add('negative-auction');
+                bidToBeatLabel.innerText = "Bid to Avoid";
+            }
+        } else if (bidToBeatBadge) {
+            bidToBeatBadge.classList.add('hidden');
+        }
         
         // Only re-render hand if it changed to prevent resetting selection
         // Quick hack: clear and rebuild unless they are already building a bid.
@@ -359,10 +411,12 @@ document.addEventListener('DOMContentLoaded', () => {
             roundResultPanel.classList.remove('hidden');
             const res = gameState.last_round_result;
             if (res) {
+                const winnerP = gameState.players.find(pl => pl.name === res.winner);
+                const winnerColor = winnerP ? PLAYER_COLORS[winnerP.id % PLAYER_COLORS.length] : 'var(--gold)';
                 if (res.type === 'positive') {
-                    roundResultText.innerText = `${res.winner} won the ${res.card} for ${res.amount} 🍌!`;
+                    roundResultText.innerHTML = `<span style="color: ${winnerColor}; font-weight: bold;">${res.winner}</span> won the ${res.card} for ${res.amount} 🍌!`;
                 } else {
-                    roundResultText.innerText = `${res.winner} took the ${res.card} and reclaimed their bid!`;
+                    roundResultText.innerHTML = `<span style="color: ${winnerColor}; font-weight: bold;">${res.winner}</span> took the ${res.card} and reclaimed their bid!`;
                 }
             }
         } else {
@@ -381,7 +435,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 else if (entry.type === "win") color = "var(--emerald-light)";
                 else if (entry.type === "danger") color = "var(--danger)";
                 else if (entry.type === "start") color = "var(--gold)";
-                return `<div style="margin-bottom: 4px; padding-bottom: 4px; border-bottom: 1px solid rgba(255,255,255,0.1); color: ${color};">${entry.msg}</div>`;
+                
+                // Colorize player names in live log
+                let msg = entry.msg;
+                gameState.players.forEach(pl => {
+                    const plColor = PLAYER_COLORS[pl.id % PLAYER_COLORS.length];
+                    const escName = pl.name.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+                    const regex = new RegExp(`\\b${escName}\\b`, 'g');
+                    msg = msg.replace(regex, `<span style="color: ${plColor}; font-weight: 600;">${pl.name}</span>`);
+                });
+
+                return `<div style="margin-bottom: 4px; padding-bottom: 4px; border-bottom: 1px solid rgba(255,255,255,0.1); color: ${color};">${msg}</div>`;
             }).join('');
             if (logContent.innerHTML !== logHTML) {
                 logContent.innerHTML = logHTML;
@@ -431,18 +495,20 @@ document.addEventListener('DOMContentLoaded', () => {
         let winner = rankings.length > 0 ? rankings[0] : null;
         
         if (winner) {
-            winnerAnnouncement.innerText = `Winner: ${winner.name}! 🏆`;
+            const winnerColor = PLAYER_COLORS[winner.id % PLAYER_COLORS.length];
+            winnerAnnouncement.innerHTML = `Winner: <span style="color: ${winnerColor}; font-weight: bold;">${winner.name}</span>! 🏆`;
         } else {
              winnerAnnouncement.innerText = `Everyone was eliminated!`;
         }
 
         // Display remaining
         rankings.forEach((p, idx) => {
+            const color = PLAYER_COLORS[p.id % PLAYER_COLORS.length];
             const row = document.createElement('div');
             row.className = `ranking-row ${idx === 0 ? 'winner' : ''}`;
             
             row.innerHTML = `
-                <span>#${idx+1} ${p.name}</span>
+                <span>#${idx+1} <span style="color: ${color}; font-weight: bold;">${p.name}</span></span>
                 <span>Score: ${p.final_score} | Money: ${p.total_money} 🍌</span>
             `;
             finalRankings.appendChild(row);
@@ -450,10 +516,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Display Eliminated
         eliminated.forEach(p => {
+             const color = PLAYER_COLORS[p.id % PLAYER_COLORS.length];
              const row = document.createElement('div');
              row.className = `ranking-row eliminated`;
              row.innerHTML = `
-                <span>ELIMINATED: ${p.name} (Poor!)</span>
+                <span>ELIMINATED: <span style="color: ${color}; font-weight: bold;">${p.name}</span> (Poor!)</span>
                 <span>Score: ${p.final_score} | Money: ${p.total_money} 🍌</span>
             `;
             finalRankings.appendChild(row);
@@ -469,7 +536,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 else if (entry.type === "win") color = "var(--emerald-light)";
                 else if (entry.type === "danger") color = "var(--danger)";
                 else if (entry.type === "start") color = "var(--gold)";
-                return `<div style="color: ${color};">${entry.msg}</div>`;
+                
+                // Colorize player names in final log
+                let msg = entry.msg;
+                gameState.players.forEach(pl => {
+                    const plColor = PLAYER_COLORS[pl.id % PLAYER_COLORS.length];
+                    const escName = pl.name.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+                    const regex = new RegExp(`\\b${escName}\\b`, 'g');
+                    msg = msg.replace(regex, `<span style="color: ${plColor}; font-weight: 600;">${pl.name}</span>`);
+                });
+
+                return `<div style="color: ${color};">${msg}</div>`;
             }).join('');
             finalLogContainer.scrollTop = finalLogContainer.scrollHeight;
         }

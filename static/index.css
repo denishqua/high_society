@@ -63,8 +63,10 @@ body {
     -webkit-backdrop-filter: blur(16px);
     border: 1px solid var(--glass-border);
     border-radius: 16px;
-    padding: 2rem;
+    padding: 24px 28px;
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+    display: flex;
+    flex-direction: column;
 }
 
 .hidden {
@@ -87,20 +89,22 @@ h1, h2, h3, .title, .card-title {
     font-family: var(--font-heading);
     color: var(--gold);
     font-weight: 700;
+    margin-top: 0;
+    margin-bottom: 12px;
 }
 
 .title {
-    font-size: 4rem;
+    font-size: 64px;
     text-align: center;
     text-shadow: 0 4px 15px rgba(0,0,0,0.8);
-    margin-bottom: 0.5rem;
+    margin-bottom: 8px;
 }
 
 .subtitle {
-    font-size: 1.2rem;
+    font-size: 19px;
     color: var(--gold-light);
     text-align: center;
-    margin-bottom: 3rem;
+    margin-bottom: 48px;
     font-style: italic;
 }
 
@@ -118,34 +122,34 @@ h1, h2, h3, .title, .card-title {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 1.5rem;
+    gap: 24px;
     width: 100%;
 }
 
 .setup-controls label {
-    font-size: 1.1rem;
+    font-size: 18px;
     letter-spacing: 1px;
 }
 
 .player-inputs {
     display: flex;
-    gap: 2rem;
-    margin-bottom: 1rem;
+    gap: 32px;
+    margin-bottom: 16px;
 }
 
 .input-group {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0.5rem;
+    gap: 8px;
 }
 
 .input-group input[type="number"] {
     background: rgba(0, 0, 0, 0.4);
     border: 1px solid var(--gold);
     color: var(--gold-light);
-    font-size: 1.5rem;
-    padding: 0.5rem;
+    font-size: 24px;
+    padding: 8px;
     width: 80px;
     text-align: center;
     border-radius: 8px;
@@ -160,7 +164,7 @@ h1, h2, h3, .title, .card-title {
 .btn-primary, .btn-secondary {
     padding: 12px 30px;
     border-radius: 8px;
-    font-size: 1.1rem;
+    font-size: 18px;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.3s ease;
@@ -198,11 +202,17 @@ h1, h2, h3, .title, .card-title {
     background: rgba(255, 255, 255, 0.1);
 }
 
+#game-screen {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
 /* Game Layout */
 .game-layout {
     display: grid;
     grid-template-columns: 1fr 2fr;
-    gap: 2rem;
+    gap: 20px;
     width: 100%;
     height: 100%;
 }
@@ -210,13 +220,17 @@ h1, h2, h3, .title, .card-title {
 .left-col {
     display: flex;
     flex-direction: column;
-    gap: 2rem;
+    gap: 20px;
+    height: 100%;
+    min-height: 0;
 }
 
 .right-col {
     display: flex;
     flex-direction: column;
-    gap: 2rem;
+    gap: 20px;
+    height: 100%;
+    min-height: 0;
 }
 
 /* Auction Center */
@@ -225,7 +239,7 @@ h1, h2, h3, .title, .card-title {
     flex-direction: column;
     align-items: center;
     text-align: center;
-    gap: 1.5rem;
+    gap: 24px;
 }
 
 /* Card Styles */
@@ -237,7 +251,7 @@ h1, h2, h3, .title, .card-title {
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    padding: 1rem;
+    padding: 16px;
     text-align: center;
     box-shadow: 0 10px 20px rgba(0,0,0,0.5);
     transition: transform 0.3s ease;
@@ -294,39 +308,51 @@ h1, h2, h3, .title, .card-title {
 }
 
 .card-title {
-    font-size: 1.5rem;
+    font-size: 24px;
     z-index: 2;
-    margin-bottom: 0.5rem;
+    margin-bottom: 8px;
 }
 
 .card-value {
-    font-size: 3rem;
+    font-size: 48px;
     font-weight: bold;
     z-index: 2;
     font-family: var(--font-heading);
 }
 
 .card.money .card-value {
-    font-size: 2rem;
+    font-size: 32px;
     color: var(--gold-light);
 }
 
 /* Players Dashboard */
+#players-dashboard {
+    padding: 20px 24px;
+}
+
+#players-dashboard h3 {
+    margin: 0;
+    font-size: 22px;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid rgba(212, 175, 55, 0.15);
+    padding-bottom: 8px;
+}
+
 #players-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-    gap: 1.5rem;
-    margin-top: 1rem;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 16px;
+    margin-top: 12px;
 }
 
 .player-card {
     background: rgba(0, 0, 0, 0.4);
     border: 1px solid rgba(255,255,255,0.1);
     border-radius: 8px;
-    padding: 1rem;
+    padding: 12px 16px;
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 6px;
     transition: all 0.3s ease;
 }
 
@@ -338,19 +364,19 @@ h1, h2, h3, .title, .card-title {
 
 .player-name {
     font-family: var(--font-heading);
-    font-size: 1.2rem;
+    font-size: 18px;
     color: var(--gold-light);
     border-bottom: 1px solid rgba(255,255,255,0.1);
-    padding-bottom: 0.5rem;
+    padding-bottom: 6px;
 }
 
 .player-bid {
-    font-size: 1.5rem;
+    font-size: 24px;
     font-weight: bold;
 }
 
 .player-status {
-    font-size: 0.9rem;
+    font-size: 14px;
     font-style: italic;
     color: var(--text-muted);
 }
@@ -359,11 +385,11 @@ h1, h2, h3, .title, .card-title {
     display: flex;
     flex-wrap: wrap;
     gap: 4px;
-    margin-top: 0.5rem;
+    margin-top: 8px;
 }
 
 .mini-card {
-    font-size: 0.7rem;
+    font-size: 11px;
     padding: 2px 6px;
     border-radius: 4px;
     background: rgba(255,255,255,0.1);
@@ -378,7 +404,8 @@ h1, h2, h3, .title, .card-title {
     display: flex;
     flex-direction: column;
     justify-content: center;
-    gap: 1.5rem;
+    gap: 16px;
+    padding: 20px 24px;
 }
 
 .hand {
@@ -386,18 +413,18 @@ h1, h2, h3, .title, .card-title {
     flex-wrap: wrap;
     gap: 10px;
     justify-content: center;
-    margin: 1rem 0;
+    margin: 16px 0;
 }
 
 .action-controls {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 1.5rem;
+    gap: 24px;
 }
 
 .bid-summary {
-    font-size: 1.2rem;
+    font-size: 19px;
 }
 
 /* Game Log */
@@ -411,15 +438,15 @@ h1, h2, h3, .title, .card-title {
 .log-content {
     flex: 1;
     overflow-y: auto;
-    font-size: 0.9rem;
+    font-size: 14px;
     color: var(--text-muted);
     padding-right: 10px;
 }
 
 .log-content p {
-    margin-bottom: 0.5rem;
+    margin-bottom: 8px;
     border-bottom: 1px solid rgba(255,255,255,0.05);
-    padding-bottom: 0.5rem;
+    padding-bottom: 8px;
 }
 
 .log-content p:last-child {
@@ -441,9 +468,9 @@ h1, h2, h3, .title, .card-title {
 .ranking-row {
     display: flex;
     justify-content: space-between;
-    padding: 1rem;
+    padding: 16px;
     border-bottom: 1px solid rgba(255,255,255,0.1);
-    font-size: 1.2rem;
+    font-size: 19px;
 }
 
 .ranking-row.eliminated {
@@ -456,5 +483,70 @@ h1, h2, h3, .title, .card-title {
     background: rgba(212, 175, 55, 0.1);
     color: var(--gold);
     font-weight: bold;
-    font-size: 1.4rem;
+    font-size: 22px;
+}
+
+/* Bid to Beat / Avoid Badge */
+.bid-to-beat-badge {
+    background: rgba(212, 175, 55, 0.12);
+    border: 1px solid var(--gold);
+    border-radius: 10px;
+    padding: 8px 19px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 10px rgba(212, 175, 55, 0.15);
+    min-width: 120px;
+    transition: all 0.3s ease;
+    animation: pulseGold 2.5s infinite ease-in-out;
+}
+
+@keyframes pulseGold {
+    0% { box-shadow: 0 0 8px rgba(212, 175, 55, 0.15); border-color: rgba(212, 175, 55, 0.4); }
+    50% { box-shadow: 0 0 16px rgba(212, 175, 55, 0.45); border-color: var(--gold); }
+    100% { box-shadow: 0 0 8px rgba(212, 175, 55, 0.15); border-color: rgba(212, 175, 55, 0.4); }
+}
+
+.bid-to-beat-badge.negative-auction {
+    background: rgba(138, 42, 42, 0.15);
+    border: 1px solid #ff4444;
+    box-shadow: 0 0 10px rgba(255, 68, 68, 0.15);
+    animation: pulseRed 2.5s infinite ease-in-out;
+}
+
+@keyframes pulseRed {
+    0% { box-shadow: 0 0 8px rgba(255, 68, 68, 0.15); border-color: rgba(255, 68, 68, 0.4); }
+    50% { box-shadow: 0 0 16px rgba(255, 68, 68, 0.45); border-color: #ff4444; }
+    100% { box-shadow: 0 0 8px rgba(255, 68, 68, 0.15); border-color: rgba(255, 68, 68, 0.4); }
+}
+
+.bid-to-beat-badge .badge-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    margin-bottom: 2px;
+}
+
+.bid-to-beat-badge .badge-value {
+    font-family: var(--font-heading);
+    font-size: 29px;
+    font-weight: bold;
+    color: var(--gold-light);
+    line-height: 1;
+}
+
+.bid-to-beat-badge.negative-auction .badge-value {
+    color: #ff9999;
+}
+
+.bid-to-beat-badge .badge-unit {
+    font-size: 18px;
+    color: var(--gold-light);
+}
+
+.bid-to-beat-badge.negative-auction .badge-unit {
+    color: #ff9999;
 }

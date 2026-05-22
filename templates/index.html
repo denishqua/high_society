@@ -69,8 +69,19 @@
                     </div>
                     
                     <div id="action-panel" class="glass-panel">
-                        <h3 id="active-player-name">Waiting...</h3>
-                        <p id="action-prompt">It's your turn to act.</p>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 16px;">
+                            <div>
+                                <h3 id="active-player-name">Waiting...</h3>
+                                <p id="action-prompt">It's your turn to act.</p>
+                            </div>
+                            <div id="bid-to-beat-badge" class="bid-to-beat-badge hidden">
+                                <span class="badge-label" id="bid-to-beat-label">BID TO BEAT</span>
+                                <div style="display: flex; align-items: center; justify-content: center; gap: 4px;">
+                                    <span id="bid-to-beat-value" class="badge-value">0</span>
+                                    <span class="badge-unit">🍌</span>
+                                </div>
+                            </div>
+                        </div>
                         
                         <div id="hand-container" class="hand">
                             <!-- Populated by JS -->
@@ -84,8 +95,8 @@
                             <button id="btn-pass" class="btn-secondary">Pass</button>
                         </div>
 
-                        <div id="round-result-panel" class="hidden" style="text-align: center; margin-top: 1rem; padding: 1rem; background: rgba(0,0,0,0.5); border-radius: 8px;">
-                            <h4 id="round-result-text" class="gold-text" style="margin-bottom: 1rem;"></h4>
+                        <div id="round-result-panel" class="hidden" style="text-align: center; margin-top: 16px; padding: 16px; background: rgba(0,0,0,0.5); border-radius: 8px;">
+                            <h4 id="round-result-text" class="gold-text" style="margin-bottom: 16px;"></h4>
                             <button id="btn-next-round" class="btn-primary">Next Round</button>
                         </div>
                     </div>
@@ -103,14 +114,14 @@
                 <!-- Populated by JS -->
             </div>
             
-            <div style="margin-top: 2rem;">
+            <div style="margin-top: 32px;">
                 <h3>Final Game Log</h3>
-                <div id="final-log" class="log-content" style="max-height: 250px; text-align: left; background: rgba(0,0,0,0.5); padding: 1rem; border-radius: 8px;">
+                <div id="final-log" class="log-content" style="max-height: 250px; text-align: left; background: rgba(0,0,0,0.5); padding: 16px; border-radius: 8px;">
                     <!-- Populated by JS -->
                 </div>
             </div>
             
-            <button id="btn-play-again" class="btn-primary" style="margin-top: 1rem;">Host Another Soirée</button>
+            <button id="btn-play-again" class="btn-primary" style="margin-top: 16px;">Host Another Soirée</button>
         </section>
     </div>
 

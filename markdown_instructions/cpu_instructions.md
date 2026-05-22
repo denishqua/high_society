@@ -28,8 +28,8 @@ More players mean more competition, less money to go around per person, and high
 ### A. Positive Auctions (Bid to Win)
 * **Luxury Cards (Values 1-10):**
     * `Max_Bid` = `Face Value * Base_Multiplier`
-* **Prestige Cards (x3 Multiplier):**
-    * The `x3` multiplies the *final* score, meaning acquiring it early when a score is 0 or negative is still highly valuable for future point acquisitions.
+* **Prestige Cards (x2 Multiplier):**
+    * The `x2` multiplies the *final* score, meaning acquiring it early when a score is 0 or negative is still highly valuable for future point acquisitions.
     * `Estimated_Value` = `max(CPU_Current_Score, 10)` *(Assumes the CPU will score at least 10 base points by the end of the game)*
     * `Max_Bid` = `Estimated_Value * Base_Multiplier`
 

@@ -397,7 +397,7 @@ if __name__ == "__main__":
     # Test simulation
     print("Running Simulation...")
     game = GameState()
-    game.start_game(3, ["Alice", "Bob", "Charlie"])
+    game.start_game(3, 0, ["Alice", "Bob", "Charlie"])
     
     # We force the deck to be deterministic for the test
     test_deck = [
@@ -406,7 +406,7 @@ if __name__ == "__main__":
         StatusCard("Multiplier 3", "multiplier", 2, True), # 3rd
         StatusCard("Faux Pas", "penalty", -5),
         StatusCard("Multiplier 2", "multiplier", 2, True), # 2nd
-        StatusCard("Theft", "penalty", 0),
+        StatusCard("Point 5", "point", 5),
         StatusCard("Multiplier 1", "multiplier", 2, True), # 1st
     ]
     game.auction_deck = test_deck
@@ -421,6 +421,7 @@ if __name__ == "__main__":
     # Winner should be p_idx
     
     # Round 2: Point 5 (Positive)
+    game.start_round()
     p_idx = game.current_player_index
     game.pass_auction(p_idx) # Start player passes
     p2 = game.current_player_index
@@ -430,6 +431,7 @@ if __name__ == "__main__":
     # Winner should be p2
     
     # Round 3: Multiplier 2 (Positive)
+    game.start_round()
     p_idx = game.current_player_index
     game.bid(p_idx, [12])
     game.pass_auction(game.current_player_index)
@@ -437,17 +439,20 @@ if __name__ == "__main__":
     
     # Round 4: Faux Pas (Negative)
     # Players bid to avoid. First to pass gets it.
+    game.start_round()
     p_idx = game.current_player_index
     game.bid(p_idx, [1])
     game.pass_auction(game.current_player_index) # Next player passes immediately
     
     # Round 5: Multiplier 3 (Positive)
+    game.start_round()
     p_idx = game.current_player_index
     game.bid(p_idx, [20])
     game.pass_auction(game.current_player_index)
     game.pass_auction(game.current_player_index)
     
     # Round 6: Point 10 (Positive)
+    game.start_round()
     p_idx = game.current_player_index
     game.bid(p_idx, [25])
     game.pass_auction(game.current_player_index)
@@ -455,6 +460,7 @@ if __name__ == "__main__":
     
     # Round 7: Scandale (4th trigger)
     # Should end game automatically
+    game.start_round()
     
     print("\nFinal State Dump:")
     import json

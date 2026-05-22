@@ -376,5 +376,59 @@ class TestHighSocietyGame(unittest.TestCase):
         self.assertFalse(self.game.players[0].has_passed)
         self.assertGreater(self.game.players[0].bid_total(), 0)
 
+    def test_agent_cpu_prefers_fewer_cards(self):
+        from cpu import AgentBasedCPU
+        self.game.players = [
+            Player(0, "Alice", is_cpu=True, cpu_strategy=AgentBasedCPU()),
+            Player(1, "Bob", is_cpu=True, cpu_strategy=AgentBasedCPU()),
+            Player(2, "Charlie", is_cpu=True, cpu_strategy=AgentBasedCPU())
+        ]
+        self.game.current_auction_card = StatusCard("Point 10", "point", 10)
+        self.game.auction_type = "positive"
+        self.game.status = "in_progress"
+        self.game.current_player_index = 0
+        self.game.end_game_triggers_revealed = 0
+        
+        # Give Alice a specific hand: [2, 3, 5, 90] (total 100)
+        # Give Bob: hand [96], bid [4] (total 100)
+        # Give Charlie: hand [100] (total 100)
+        self.game.players[0].hand = [2, 3, 5, 90]
+        self.game.players[1].hand = [96]
+        self.game.players[1].current_bid = [4]
+        self.game.players[2].hand = [100]
+        
+        # Alice can bid [5] (total 5, 1 card) or [2, 3] (total 5, 2 cards) to beat Bob's 4.
+        # Alice should prefer [5] to conserve money card counts.
+        self.game.execute_cpu_turn()
+        self.assertEqual(self.game.players[0].bid_total(), 5)
+        self.assertEqual(self.game.players[0].hand, [2, 3, 90]) # Spent 5
+
+    def test_agent_cpu_avoids_empty_hand(self):
+        from cpu import AgentBasedCPU
+        self.game.players = [
+            Player(0, "Alice", is_cpu=True, cpu_strategy=AgentBasedCPU()),
+            Player(1, "Bob", is_cpu=True, cpu_strategy=AgentBasedCPU()),
+            Player(2, "Charlie", is_cpu=True, cpu_strategy=AgentBasedCPU())
+        ]
+        self.game.current_auction_card = StatusCard("Point 5", "point", 5)
+        self.game.auction_type = "positive"
+        self.game.status = "in_progress"
+        self.game.current_player_index = 0
+        self.game.end_game_triggers_revealed = 0
+        
+        # Give Alice only [5] (total wealth 5, 1 card)
+        # Bob has wealth 5 (hand [1], current_bid [4])
+        # Charlie has wealth 5
+        self.game.players[0].hand = [5]
+        self.game.players[1].hand = [1]
+        self.game.players[1].current_bid = [4]
+        self.game.players[2].hand = [5]
+        
+        # Bidding 5 would empty Alice's hand completely, leaving remaining_hand == 0.
+        # For a Point 5 card, the extreme hand depletion penalty makes passing more attractive.
+        self.game.execute_cpu_turn()
+        self.assertTrue(self.game.players[0].has_passed)
+        self.assertEqual(self.game.players[0].bid_total(), 0)
+
 if __name__ == "__main__":
     unittest.main()

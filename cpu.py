@@ -345,19 +345,44 @@ class AgentBasedCPU(CPUStrategy):
         # 3. Tactical Utility (Poverty Trap etc.)
         tactical_utility = self.calculate_tactical_utility(beliefs, action_type)
         
-        # 4. Waste Penalty
+        # 4. Waste Penalty & Card Count Flexibility Penalty
+        # Having fewer money cards drastically limits future bidding granularity.
+        # This penalty makes the agent weigh the 'card count cost' of its action.
         waste_penalty = 0.0
+        card_count_penalty = 0.0
+        
         if action_type == 'bid':
             added_sum = sum(bid_combo)
             new_bid_total = beliefs.my_bid + added_sum
             waste = new_bid_total - (beliefs.highest_bid + 1)
             
+            # If the agent has many cards in hand, overpaying is highly penalized.
+            # However, when hand size is low (< 5), the agent's bidding options become
+            # extremely sparse (e.g. forced to bid 20 to beat 1 if 20 is the only card left).
+            # We scale down waste_factor to 1.0 in this case so the agent is allowed to overpay
+            # due to limited options rather than passing and losing high-value auctions.
             waste_factor = 2.5
             if len(beliefs.my_hand) < 5:
                 waste_factor = 1.0
             waste_penalty = max(0, waste) * waste_factor
             
-        return wealth_utility + card_utility + tactical_utility - waste_penalty
+            # Flexibility: penalize based on number of cards spent and remaining hand size.
+            # Spending multiple small cards (e.g., [1, 2, 3, 4]) instead of a single larger card (e.g., [10])
+            # is heavily discouraged as it depletes hand granularity.
+            cards_spent = len(bid_combo)
+            remaining_hand = len(beliefs.my_hand) - cards_spent
+            
+            if remaining_hand == 0:
+                # Leaving yourself with 0 cards in hand means absolute bidding paralysis in future rounds.
+                card_count_penalty = cards_spent * 15.0
+            elif remaining_hand < 3:
+                card_count_penalty = cards_spent * 8.0
+            elif remaining_hand < 5:
+                card_count_penalty = cards_spent * 4.0
+            else:
+                card_count_penalty = cards_spent * 1.5
+            
+        return wealth_utility + card_utility + tactical_utility - waste_penalty - card_count_penalty
 
     def calculate_wealth_utility(self, beliefs, remaining_money):
         poorest_opp = beliefs.poorest_opp_money

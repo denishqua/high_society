@@ -344,5 +344,37 @@ class TestHighSocietyGame(unittest.TestCase):
         self.game.execute_cpu_turn()
         self.assertTrue(True)
 
+    def test_selectable_cpu_type_start_game(self):
+        # 1. Start game with 'agent' (Utility Agent)
+        self.game.start_game(1, 2, ["Human 1"], cpu_type='agent')
+        from cpu import AgentBasedCPU
+        self.assertIsInstance(self.game.players[1].cpu_strategy, AgentBasedCPU)
+        self.assertIsInstance(self.game.players[2].cpu_strategy, AgentBasedCPU)
+
+        # 2. Start game with 'heuristic' (Advanced Heuristic)
+        self.game.start_game(1, 2, ["Human 1"], cpu_type='heuristic')
+        from cpu import AdvancedHeuristicCPU
+        self.assertIsInstance(self.game.players[1].cpu_strategy, AdvancedHeuristicCPU)
+        self.assertIsInstance(self.game.players[2].cpu_strategy, AdvancedHeuristicCPU)
+
+    def test_agent_cpu_basic_bidding(self):
+        from cpu import AgentBasedCPU
+        self.game.players = [
+            Player(0, "Alice", is_cpu=True, cpu_strategy=AgentBasedCPU()),
+            Player(1, "Bob", is_cpu=True, cpu_strategy=AgentBasedCPU()),
+            Player(2, "Charlie", is_cpu=True, cpu_strategy=AgentBasedCPU())
+        ]
+        self.game.current_auction_card = StatusCard("Point 10", "point", 10)
+        self.game.auction_type = "positive"
+        self.game.status = "in_progress"
+        self.game.current_player_index = 0
+        self.game.end_game_triggers_revealed = 0
+        
+        # All players start with standard hands and total 105.
+        # Player 0 should bid (since card is a Point 10 and they have a healthy margin)
+        self.game.execute_cpu_turn()
+        self.assertFalse(self.game.players[0].has_passed)
+        self.assertGreater(self.game.players[0].bid_total(), 0)
+
 if __name__ == "__main__":
     unittest.main()

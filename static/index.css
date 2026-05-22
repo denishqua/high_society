@@ -133,6 +133,8 @@ h1, h2, h3, .title, .card-title {
 
 .player-inputs {
     display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
     gap: 2rem;
     margin-bottom: 16px;
 }
@@ -154,6 +156,31 @@ h1, h2, h3, .title, .card-title {
     text-align: center;
     border-radius: 8px;
     font-family: var(--font-heading);
+}
+
+.input-group select {
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid var(--gold);
+    color: var(--gold-light);
+    font-size: 1.1rem;
+    padding: 0.5rem 1rem;
+    width: 220px;
+    text-align: center;
+    border-radius: 8px;
+    font-family: var(--font-heading);
+    cursor: pointer;
+    outline: none;
+    transition: all 0.3s ease;
+}
+
+.input-group select:hover {
+    border-color: var(--gold-light);
+    box-shadow: 0 0 10px rgba(212, 175, 55, 0.3);
+}
+
+.input-group select option {
+    background: #0f172a;
+    color: var(--gold-light);
 }
 
 .error-text {

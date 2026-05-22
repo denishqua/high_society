@@ -27,6 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const humanInput = document.getElementById('human-count');
     const cpuInput = document.getElementById('cpu-count');
     const cpuSpeedInput = document.getElementById('cpu-speed');
+    const cpuTypeInput = document.getElementById('cpu-type');
     const btnStart = document.getElementById('btn-start');
     const setupError = document.getElementById('setup-error');
 
@@ -84,7 +85,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 const res = await fetch('/api/start', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ num_human: humanCount, num_cpu: cpuCount })
+                    body: JSON.stringify({ 
+                        num_human: humanCount, 
+                        num_cpu: cpuCount,
+                        cpu_type: cpuTypeInput ? cpuTypeInput.value : 'agent'
+                    })
                 });
                 if (res.ok) {
                     showScreen('game');

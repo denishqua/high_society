@@ -231,3 +231,195 @@ class AdvancedHeuristicCPU(CPUStrategy):
                 game_state.bid(player_index, best_combo)
         else:
             game_state.pass_auction(player_index)
+
+
+class AgentBeliefs:
+    def __init__(self, game_state, player_index):
+        p = game_state.players[player_index]
+        self.my_id = p.id
+        self.my_name = p.name
+        self.my_wealth = p.total_money()
+        self.my_score = p.current_score()
+        self.my_bid = p.bid_total()
+        self.my_hand = list(p.hand)
+        self.my_tableau = list(p.tableau)
+        
+        # Track opponents
+        self.opponents = []
+        for idx, pl in enumerate(game_state.players):
+            if idx != player_index:
+                self.opponents.append({
+                    'id': pl.id,
+                    'name': pl.name,
+                    'wealth': pl.total_money(),
+                    'score': pl.current_score(),
+                    'bid': pl.bid_total(),
+                    'has_passed': pl.has_passed,
+                    'hand_size': len(pl.hand),
+                    'tableau': list(pl.tableau)
+                })
+        
+        # General state
+        self.auction_type = game_state.auction_type
+        self.current_card = game_state.current_auction_card
+        self.highest_bid = game_state.get_highest_bid()
+        self.end_game_triggers = game_state.end_game_triggers_revealed
+        self.total_players = len(game_state.players)
+        
+        # Calculate financial rankings
+        all_money = sorted([pl.total_money() for pl in game_state.players], reverse=True)
+        self.poorest_money = all_money[-1]
+        self.richest_money = all_money[0]
+        self.is_poorest = (self.my_wealth == self.poorest_money)
+        self.is_richest = (self.my_wealth == self.richest_money)
+        
+        # Find margin to poorest opponent's cash
+        opp_money = [opp['wealth'] for opp in self.opponents]
+        self.poorest_opp_money = min(opp_money) if opp_money else 0
+        self.margin_to_poorest = self.my_wealth - self.poorest_opp_money
+        
+        # Calculate score leadership
+        all_scores = [pl.current_score() for pl in game_state.players]
+        self.leader_score = max(all_scores) if all_scores else 0
+        self.is_leader = (self.my_score == self.leader_score)
+
+
+class AgentBasedCPU(CPUStrategy):
+    def execute_turn(self, game_state, player_index):
+        if game_state.status != "in_progress":
+            return
+            
+        p = game_state.players[player_index]
+        if not p.is_cpu or p.has_passed:
+            return
+            
+        # Parse beliefs
+        beliefs = AgentBeliefs(game_state, player_index)
+        
+        # Evaluate PASS utility
+        pass_utility = self.evaluate_action(beliefs, 'pass')
+        
+        # Generate and evaluate all valid BID options
+        best_action = 'pass'
+        best_combo = None
+        max_utility = pass_utility
+        
+        # Calculate all combinations of added cards up to 3 cards
+        for r in range(1, min(4, len(p.hand) + 1)):
+            for combo in itertools.combinations(p.hand, r):
+                bid_added = sum(combo)
+                new_bid = p.bid_total() + bid_added
+                
+                # Check validity: bid must beat the highest bid
+                if new_bid <= beliefs.highest_bid:
+                    continue
+                    
+                # Evaluate this bid combination
+                bid_utility = self.evaluate_action(beliefs, 'bid', list(combo))
+                if bid_utility > max_utility:
+                    max_utility = bid_utility
+                    best_action = 'bid'
+                    best_combo = list(combo)
+                    
+        # Execute selected action
+        if best_action == 'bid' and best_combo is not None:
+            game_state.bid(player_index, best_combo)
+        else:
+            game_state.pass_auction(player_index)
+            
+    def evaluate_action(self, beliefs, action_type, bid_combo=None):
+        card = beliefs.current_card
+        
+        # Determine remaining wealth after this action
+        if action_type == 'pass':
+            remaining_wealth = beliefs.my_wealth
+        else:
+            remaining_wealth = beliefs.my_wealth - sum(bid_combo)
+            
+        # 1. Wealth Utility (Avoiding poverty elimination)
+        wealth_utility = self.calculate_wealth_utility(beliefs, remaining_wealth)
+        
+        # 2. Card Utility (Points/Multipliers gain vs. Penalties taking)
+        card_utility = self.calculate_card_utility(beliefs, card, action_type)
+        
+        # 3. Tactical Utility (Poverty Trap etc.)
+        tactical_utility = self.calculate_tactical_utility(beliefs, action_type)
+        
+        # 4. Waste Penalty
+        waste_penalty = 0.0
+        if action_type == 'bid':
+            added_sum = sum(bid_combo)
+            new_bid_total = beliefs.my_bid + added_sum
+            waste = new_bid_total - (beliefs.highest_bid + 1)
+            
+            waste_factor = 2.5
+            if len(beliefs.my_hand) < 5:
+                waste_factor = 1.0
+            waste_penalty = max(0, waste) * waste_factor
+            
+        return wealth_utility + card_utility + tactical_utility - waste_penalty
+
+    def calculate_wealth_utility(self, beliefs, remaining_money):
+        poorest_opp = beliefs.poorest_opp_money
+        margin = remaining_money - poorest_opp
+        
+        game_urgency = 1.0 + (beliefs.end_game_triggers * 1.5)
+        
+        if margin < 0:
+            utility = margin * 8.0 * game_urgency
+        elif margin == 0:
+            utility = -15.0 * game_urgency
+        elif margin <= 5:
+            utility = (margin - 6) * 3.0 * game_urgency
+        else:
+            utility = margin * 0.1
+            
+        return utility
+
+    def calculate_card_utility(self, beliefs, card, action_type):
+        if beliefs.auction_type == 'positive':
+            if action_type == 'pass':
+                return 0.0
+                
+            if card.type == 'point':
+                desperation = 1.0 + (max(0, beliefs.leader_score - beliefs.my_score) / 20.0)
+                return card.value * 5.0 * desperation
+            elif card.type == 'multiplier':
+                marginal_value = max(beliefs.my_score, 10.0)
+                return marginal_value * 5.0
+                
+        else: # negative auction
+            if action_type == 'bid':
+                return 0.0
+                
+            if card.name == 'Faux Pas':
+                multiplier_count = sum(1 for c in beliefs.my_tableau if c.type == 'multiplier')
+                multiplier_factor = 2 ** multiplier_count
+                loss = 5.0 * multiplier_factor
+                return -loss * 6.0
+                
+            elif card.name == 'Scandale':
+                loss = beliefs.my_score / 2.0
+                return -max(loss, 6.0) * 6.0
+                
+            elif card.name == 'Theft':
+                point_cards = [c.value for c in beliefs.my_tableau if c.type == 'point']
+                loss = max(point_cards) if point_cards else 5.0
+                return -loss * 6.0
+                
+        return 0.0
+
+    def calculate_tactical_utility(self, beliefs, action_type):
+        if beliefs.auction_type == 'positive' and action_type == 'pass':
+            highest_bidder = None
+            for opp in beliefs.opponents:
+                if opp['bid'] == beliefs.highest_bid and beliefs.highest_bid > 0:
+                    highest_bidder = opp
+                    break
+                    
+            if highest_bidder:
+                is_poorest_opp = (highest_bidder['wealth'] == beliefs.poorest_money)
+                if is_poorest_opp and highest_bidder['bid'] > highest_bidder['wealth'] * 0.15:
+                    return 25.0
+                    
+        return 0.0

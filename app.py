@@ -19,13 +19,14 @@ def start_game():
     data = request.json
     num_human = data.get("num_human", 1)
     num_cpu = data.get("num_cpu", 2)
+    cpu_type = data.get("cpu_type", "agent")
     
     # Re-initialize game
     game.__init__()
     
     # We can use monkey-themed names!
     names = ["Lord Chimington", "Duke Macaque", "Count Baboon", "Sir Orangutan", "Baron Gorilla"]
-    game.start_game(num_human, num_cpu, names[:num_human])
+    game.start_game(num_human, num_cpu, names[:num_human], cpu_type=cpu_type)
     
     return jsonify({"success": True})
 

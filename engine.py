@@ -1,6 +1,6 @@
 import random
 import itertools
-from cpu import AdvancedHeuristicCPU
+from cpu import AdvancedHeuristicCPU, AgentBasedCPU
 
 class StatusCard:
     def __init__(self, name, card_type, value, is_end_game_trigger=False):
@@ -109,7 +109,7 @@ class GameState:
         self.game_log.append({"msg": msg, "type": log_type})
         print(msg)
 
-    def start_game(self, num_human, num_cpu, player_names=None):
+    def start_game(self, num_human, num_cpu, player_names=None, cpu_type='agent'):
         num_players = num_human + num_cpu
         if not (3 <= num_players <= 5):
             raise ValueError("Player count must be 3-5")
@@ -117,6 +117,12 @@ class GameState:
         self.players = []
         human_count = 0
         cpu_count = 0
+        
+        if cpu_type == 'agent':
+            strategy_class = AgentBasedCPU
+        else:
+            strategy_class = AdvancedHeuristicCPU
+            
         for i in range(num_players):
             if human_count < num_human:
                 name = player_names[i] if player_names and i < len(player_names) else f"Player {human_count+1}"
@@ -125,7 +131,7 @@ class GameState:
             else:
                 cpu_names = ["Bot Chimington", "Bot Macaque", "Bot Baboon", "Bot Orangutan", "Bot Gorilla"]
                 name = cpu_names[cpu_count % len(cpu_names)]
-                self.players.append(Player(i, name, is_cpu=True, cpu_strategy=AdvancedHeuristicCPU()))
+                self.players.append(Player(i, name, is_cpu=True, cpu_strategy=strategy_class()))
                 cpu_count += 1
             
         self.auction_deck = get_initial_deck()

@@ -28,14 +28,14 @@ body {
 .container {
     width: 100%;
     max-width: 800px;
-    padding: 32px;
+    padding: 2rem;
     text-align: center;
 }
 
 header h1 {
-    font-size: 56px;
+    font-size: 3.5rem;
     font-weight: 800;
-    margin-bottom: 8px;
+    margin-bottom: 0.5rem;
     background: linear-gradient(to right, #60a5fa, #a78bfa);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -43,9 +43,9 @@ header h1 {
 }
 
 header p {
-    font-size: 19px;
+    font-size: 1.2rem;
     color: var(--text-secondary);
-    margin-bottom: 48px;
+    margin-bottom: 3rem;
 }
 
 .card {
@@ -53,7 +53,7 @@ header p {
     backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 16px;
-    padding: 48px;
+    padding: 3rem;
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
     transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
@@ -64,13 +64,13 @@ header p {
 }
 
 .card h2 {
-    font-size: 32px;
-    margin-bottom: 16px;
+    font-size: 2rem;
+    margin-bottom: 1rem;
 }
 
 .card p {
     color: var(--text-secondary);
-    margin-bottom: 32px;
+    margin-bottom: 2rem;
     line-height: 1.6;
 }
 
@@ -78,8 +78,8 @@ header p {
     background-color: var(--accent-color);
     color: white;
     border: none;
-    padding: 16px 32px;
-    font-size: 18px;
+    padding: 1rem 2rem;
+    font-size: 1.1rem;
     font-weight: 600;
     border-radius: 8px;
     cursor: pointer;

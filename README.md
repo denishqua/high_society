@@ -1,35 +1,59 @@
-# High Society: The Ape Aristocracy
+# High Society: Digital Implementations
 
-A digital implementation of the classic auction and bidding game "High Society" by Reiner Knizia, featuring a premium "Ape Aristocracy" theme, glassmorphic UI design, and computer AI players.
+This repository contains two digital implementations of Reiner Knizia's classic auction and bidding board game **High Society**. The workspace has been organized into two separate subfolders to prevent any dependency conflicts.
 
-## Game Rules
+---
 
-Players bid on Point and Multiplier cards while trying to avoid Penalty cards. The game ends instantly when the fourth "End Game" card (Scandale or a Multiplier card) is revealed. 
+## Workspace Structure
 
-The player with the most points wins. However, there's a catch: **the player with the least money left at the end of the game is instantly eliminated**, regardless of their points! 
+* [**`hotseat/`**](file:///Users/denis/Projects/high_society/hotseat/)
+  An "Ape Aristocracy" themed digital implementation of High Society designed for local, same-screen "hotseat" multiplayer and playing against computer AI opponents. Built with Python (Flask, REST API, heuristic and agent-based CPUs) and modern vanilla HTML/CSS.
+* [**`multiplayer/`**](file:///Users/denis/Projects/high_society/multiplayer/)
+  A completely standalone, real-time multiplayer implementation designed for playing with friends on their own mobile devices over your local network or public tunnels (e.g., Pinggy). Built with Node.js, Express, and WebSockets (Socket.io).
 
-For full rules, see `game_instructions.md`.
+---
 
-## Features
-- Complete implementation of the High Society ruleset (including tie-breakers and the Theft pending rule).
-- Hot-seat multiplayer support.
-- Heuristic-based Computer AI Players to play against.
-- Sleek, modern, responsive UI built with Vanilla JS and CSS.
-- Flask-based stateful REST API backend.
+## 1. Local Hotseat Implementation (`hotseat/`)
 
-## Running the Game
-
-1. Install requirements:
+### Setup & Launch
+1. Ensure Python 3 is installed.
+2. Open your terminal in the `hotseat/` directory:
+   ```bash
+   cd hotseat
+   ```
+3. Install dependencies:
    ```bash
    pip install -r requirements.txt
    ```
-2. Start the server:
+4. Run the Flask server:
    ```bash
    python app.py
    ```
-3. Open your browser to `http://127.0.0.1:5000`
+5. Open your browser to `http://127.0.0.1:5000`.
 
-## Architecture
-- `engine.py`: The core, pure-Python logic engine for the game state, card interactions, and AI decision making.
-- `app.py`: The Flask wrapper exposing RESTful APIs.
-- `templates/index.html` & `static/`: The frontend application.
+---
+
+## 2. Local Network Multiplayer Implementation (`multiplayer/`)
+
+### Architecture
+* **The Central Display (`/board`)**: Shared TV or laptop screen hosting the main physical board. Shows status cards, active bidding pools, player statuses, and final results.
+* **The Player Controller (`/`)**: Mobile phone interface. Displays private hands ($1k–$25k), and handles interactive bidding/passing.
+* **Network Tunneling Ready**: Listens globally on `0.0.0.0:3000` to seamlessly accept incoming tunnels (e.g. Pinggy, Ngrok) or direct local network IP connections.
+
+### Setup & Launch
+1. Ensure Node.js (v18+) is installed.
+2. Open your terminal in the `multiplayer/` directory:
+   ```bash
+   cd multiplayer
+   ```
+3. Install dependencies:
+   ```bash
+   npm install
+   ```
+4. Start the Express/Socket.io server:
+   ```bash
+   node server.js
+   ```
+5. **Accessing the Game**:
+   * **Central Display**: Connect your laptop/TV to `http://<your-computer-ip>:3000/board`.
+   * **Players (Mobile)**: Scan a QR code of your local computer IP or tunnel URL pointing to `http://<your-computer-ip>:3000/` to join the game!

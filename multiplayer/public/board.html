@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>High Society - Central Display Board</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+  <div class="board-layout">
+    
+    <!-- MAIN INTERACTIVE BOARD CONTAINER -->
+    <div class="main-board-container">
+      
+      <!-- Board Header -->
+      <header class="board-header glass-panel">
+        <h1 class="board-logo gold-text">High Society</h1>
+        <div class="deck-indicator">
+          <div id="deck-count" class="deck-count-pill">Cards Left: 16</div>
+          <div id="triggers-count" class="deck-count-pill" style="border-color: rgba(255, 77, 77, 0.3); color: #ff9999;">Triggers: 0/4</div>
+        </div>
+      </header>
+
+      <!-- Central Bidding Stage / Lobby Screen -->
+      <div id="central-stage" class="glass-panel" style="flex: 1; display: flex; flex-direction: column;">
+        <!-- Dynamic content: Lobby or Active Arena -->
+        <div id="stage-content" class="auction-arena">
+          <!-- Render lobby or current card here -->
+        </div>
+      </div>
+
+      <!-- Player Seats Status Row -->
+      <div id="players-row" class="players-grid">
+        <!-- Render player panels here dynamically -->
+      </div>
+      
+    </div>
+
+    <!-- SIDEBAR: GAME EVENT LOGS AND TICKER -->
+    <aside class="sidebar-panel glass-panel">
+      <h3 class="log-title gold-text">Game Chronicles</h3>
+      <div id="log-ticker" class="log-ticker">
+        <div style="font-size: 0.85rem; opacity: 0.5;">Awaiting game start chronicles...</div>
+      </div>
+    </aside>
+
+  </div>
+
+  <!-- FINAL GAME RESULTS OVERLAY -->
+  <div id="finish-screen" class="finish-overlay" style="display: none;">
+    <div class="finish-card glass-panel float-animation">
+      <h1 class="finish-title gold-text">The Grand Finale</h1>
+      <div class="finish-subtitle">Ape Aristocracy Rankings</div>
+      
+      <table class="results-table">
+        <thead>
+          <tr>
+            <th>Rank</th>
+            <th>Aristocrat</th>
+            <th>Final Score</th>
+            <th>Remaining Cash</th>
+            <th>Acquisitions</th>
+          </tr>
+        </thead>
+        <tbody id="results-tbody">
+          <!-- Standings rows rendered here dynamically -->
+        </tbody>
+      </table>
+      
+      <button id="restart-btn" class="btn-primary" style="padding: 15px 40px; font-size: 1.1rem;">Restart New Game</button>
+    </div>
+  </div>
+
+  <!-- Socket.io and Client Script -->
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/board.js"></script>
+</body>
+</html>

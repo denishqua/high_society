@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>High Society - Player Controller</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+  <!-- 1. JOIN GAME LOBBY VIEW -->
+  <div id="join-view" class="lobby-container glass-panel">
+    <div class="logo gold-text">High Society</div>
+    <div class="lobby-subtitle">Ape Aristocracy Multiplayer</div>
+    <div class="join-form">
+      <label for="player-name">ENTER YOUR ARISTOCRATIC NAME</label>
+      <input type="text" id="player-name" placeholder="e.g. Baron Denis" maxlength="16" autofocus>
+      <button id="join-btn" class="btn-primary">Join Game</button>
+      <div id="join-error" style="color: #ff4d4d; font-size: 0.85rem; margin-top: 5px; display: none;"></div>
+    </div>
+  </div>
+
+  <!-- 2. PLAYER GAME PANEL -->
+  <div id="game-view" class="player-layout" style="display: none;">
+    <!-- Header status -->
+    <header class="player-header glass-panel">
+      <div>
+        <h3 id="my-display-name" class="gold-text">Player</h3>
+        <div id="my-theft-status" style="font-size: 0.75rem; color: #ff9999; display: none;">Pending Theft: 0</div>
+      </div>
+      <div id="conn-badge" class="player-status-badge badge-connected">Connected</div>
+    </header>
+
+    <!-- Auction Stage Info -->
+    <div class="current-round-panel glass-panel">
+      <div class="zone-label" style="margin-bottom: 2px;">Active Auction Card</div>
+      
+      <!-- Dynamic Card Container -->
+      <div id="card-stage">
+        <!-- Render card here dynamically -->
+        <div style="font-size: 0.9rem; opacity: 0.6;">Waiting for round to start...</div>
+      </div>
+      
+      <div id="auction-bidding-status" style="font-size: 0.85rem; opacity: 0.85; margin-top: 5px;">
+        Highest Bid on Table: <strong>$0k</strong>
+      </div>
+    </div>
+
+    <!-- Active Bidding Console -->
+    <div class="console-panel">
+      <!-- Turn indicator Banner -->
+      <div id="turn-banner" class="turn-banner turn-waiting">
+        Waiting for Game to Start...
+      </div>
+
+      <!-- Construction zone for adding bills to bid -->
+      <div class="bid-construction-zone glass-panel">
+        <div class="zone-label">
+          <span>Your Selected Increase</span>
+          <span id="selected-bid-total" class="gold-text">$0k</span>
+        </div>
+        <!-- Selected cards tray -->
+        <div id="selected-bills-tray" class="selected-bills-tray">
+          <div style="font-size: 0.8rem; opacity: 0.5;">Click money cards below to add to your bid...</div>
+        </div>
+      </div>
+
+      <!-- Action buttons -->
+      <div class="bid-actions-row">
+        <button id="submit-bid-btn" class="btn-primary" disabled>Submit Bid</button>
+        <button id="pass-btn" class="btn-danger" disabled>Pass</button>
+      </div>
+      <div id="action-error-msg" style="color: #ff4d4d; font-size: 0.8rem; text-align: center; margin-top: -5px; display: none;"></div>
+    </div>
+
+    <!-- Private hand -->
+    <div class="private-hand-panel">
+      <div class="hand-label">Your Private Hand (Hidden)</div>
+      <div class="bills-scroll-wrapper">
+        <div id="bills-container" class="bills-container">
+          <!-- Render bills here dynamically -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Socket.io and Client Script -->
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/player.js"></script>
+</body>
+</html>

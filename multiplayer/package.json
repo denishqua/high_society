@@ -1,0 +1,17 @@
+{
+  "name": "high-society-multiplayer",
+  "version": "1.0.0",
+  "description": "Multiplayer real-time High Society board game using Node.js, Express and Socket.io",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "socket.io": "^4.7.5"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "private": true
+}

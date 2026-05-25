@@ -237,13 +237,15 @@ socket.on('playerStateUpdate', (state) => {
   joinView.style.display = 'none';
   gameView.style.display = 'flex';
 
-  // Chime trigger exactly once when turn starts
+  // Chime trigger exactly once when turn starts, toggle active turn body glow class
   if (state.isMyTurn) {
+    document.body.classList.add('my-turn-active');
     if (!clientState.hadTurn) {
       clientState.hadTurn = true;
       playTurnChime();
     }
   } else {
+    document.body.classList.remove('my-turn-active');
     clientState.hadTurn = false;
   }
 
@@ -326,7 +328,7 @@ function formatCardLabel(c) {
   if (c.type === 'multiplier') return `x2`;
   if (c.name === 'Scandal') return `÷2`;
   if (c.name === 'Faux Pas') return `-5`;
-  if (c.name === 'Passé') return `Vol`;
+  if (c.name === 'Passé') return `—`;
   return c.name;
 }
 
@@ -417,7 +419,7 @@ function renderAuctionCard(card, type, status, players) {
   if (card.type === 'point') valDisplay = `+${card.value}`;
   if (card.type === 'multiplier') valDisplay = `x2`;
   if (card.name === 'Scandal') valDisplay = `x½`;
-  if (card.name === 'Passé') valDisplay = `Vol`;
+  if (card.name === 'Passé') valDisplay = `—`;
   if (card.name === 'Faux Pas') valDisplay = `-5`;
 
   cardStage.innerHTML = `

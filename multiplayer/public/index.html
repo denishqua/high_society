@@ -3,69 +3,115 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>High Society - Player Controller</title>
+  <title>High Society - Multiplayer</title>
   <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
 
-  <!-- 1. JOIN GAME LOBBY VIEW -->
+  <!-- ==========================================================================
+       1. JOIN GAME LOBBY VIEW
+       ========================================================================== -->
   <div id="join-view" class="lobby-container glass-panel">
     <div class="logo gold-text">High Society</div>
-    <div class="lobby-subtitle">Ape Aristocracy Multiplayer</div>
+    <div class="lobby-subtitle">Ape Aristocracy Club</div>
+    
     <div class="join-form">
-      <label for="player-name">ENTER YOUR ARISTOCRATIC NAME</label>
-      <input type="text" id="player-name" placeholder="e.g. Baron Denis" maxlength="16" autofocus>
-      <button id="join-btn" class="btn-primary">Join Game</button>
-      <div id="join-error" style="color: #ff4d4d; font-size: 0.85rem; margin-top: 5px; display: none;"></div>
+      <label for="player-name">CHOOSE YOUR ARISTOCRATIC TITLE</label>
+      <input type="text" id="player-name" placeholder="e.g. Duke Chimpanzee" maxlength="16">
+      
+      <label>SELECT YOUR AVATAR PROFILE</label>
+      <div id="avatar-picker" class="avatar-grid">
+        <div class="avatar-item selected" data-avatar="🦁">🦁</div>
+        <div class="avatar-item" data-avatar="🦊">🦊</div>
+        <div class="avatar-item" data-avatar="🦍">🦍</div>
+        <div class="avatar-item" data-avatar="🐨">🐨</div>
+        <div class="avatar-item" data-avatar="🐸">🐸</div>
+        <div class="avatar-item" data-avatar="🐼">🐼</div>
+        <div class="avatar-item" data-avatar="👑">👑</div>
+        <div class="avatar-item" data-avatar="🎩">🎩</div>
+      </div>
+      
+      <button id="join-btn" class="btn-primary">Join Club Lobby</button>
+      <div id="join-error" style="color: #ff4d4d; font-size: 0.85rem; text-align: center; display: none;"></div>
+    </div>
+    
+    <!-- Lobby Roster waiting room -->
+    <div id="lobby-roster-section" class="glass-panel" style="margin-top: 25px; text-align: left; display: none;">
+      <h3 class="luxury-text gold-text" style="font-size: 0.95rem; margin-bottom: 12px; border-bottom: 1px solid rgba(223,186,89,0.15); padding-bottom: 6px;">
+        Roster of Joined Aristocrats
+      </h3>
+      <div id="lobby-players-list" style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 15px;">
+        <!-- Filled dynamically -->
+      </div>
+      <div id="lobby-action-row" style="text-align: center;">
+        <!-- Dynamically rendered Start Button or Awaiting label -->
+      </div>
     </div>
   </div>
 
-  <!-- 2. PLAYER GAME PANEL -->
+  <!-- ==========================================================================
+       2. UNIFIED GAME VIEW (index.html)
+       ========================================================================== -->
   <div id="game-view" class="player-layout" style="display: none;">
-    <!-- Header status -->
+    
+    <!-- Header / Info Bar -->
     <header class="player-header glass-panel">
-      <div>
-        <h3 id="my-display-name" class="gold-text">Player</h3>
-        <div id="my-theft-status" style="font-size: 0.75rem; color: #ff9999; display: none;">Pending Theft: 0</div>
+      <div class="gold-text" style="font-size: 1.2rem; font-weight: 900;">HIGH SOCIETY</div>
+      <div style="display: flex; gap: 10px;">
+        <span id="deck-count-badge" class="player-status-badge badge-connected" style="background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1); color: #fff;">Cards: 16</span>
+        <span id="triggers-count-badge" class="player-status-badge badge-disconnected" style="background: rgba(255, 77, 77, 0.05); border-color: rgba(255, 77, 77, 0.15); color: #ff9999;">Triggers: 0/4</span>
       </div>
-      <div id="conn-badge" class="player-status-badge badge-connected">Connected</div>
     </header>
 
-    <!-- Auction Stage Info -->
+    <!-- Upper Deck: Player Seats Grid -->
+    <div id="players-dashboard" class="glass-panel" style="padding: 10px; overflow-x: auto; display: flex; gap: 10px; min-height: 80px; align-items: center;">
+      <!-- Player seats rendered dynamically here as horizontal blocks -->
+    </div>
+
+    <!-- Central Stage: Card up for auction + Timer bar -->
     <div class="current-round-panel glass-panel">
-      <div class="zone-label" style="margin-bottom: 2px;">Active Auction Card</div>
-      
-      <!-- Dynamic Card Container -->
-      <div id="card-stage">
-        <!-- Render card here dynamically -->
-        <div style="font-size: 0.9rem; opacity: 0.6;">Waiting for round to start...</div>
+      <!-- Round Status Details -->
+      <div id="auction-stage-info" style="font-size: 0.75rem; opacity: 0.6; text-transform: uppercase; letter-spacing: 1px;">
+        Bidding to Acquire
       </div>
       
-      <div id="auction-bidding-status" style="font-size: 0.85rem; opacity: 0.85; margin-top: 5px;">
-        Highest Bid on Table: <strong>$0k</strong>
+      <!-- Current Card Stage -->
+      <div id="card-stage">
+        <!-- Renders Card here dynamically -->
+      </div>
+      
+      <!-- Highest Bid status -->
+      <div id="highest-bid-badge" style="font-size: 0.85rem; text-align: center; display: none;">
+        Highest Bid on Table: <strong style="color: #60a5fa;">$0k</strong> (by Baron Denis)
+      </div>
+
+      <!-- Turn Timer Countdown Progress Bar -->
+      <div id="turn-timer-container" class="timer-bar-container" style="display: none; width: 100%; max-width: 280px; margin-top: 5px;">
+        <div id="turn-timer-bar" class="timer-bar"></div>
+        <div id="turn-timer-text" style="font-size: 0.75rem; font-weight: 800; text-align: center; margin-top: 4px; letter-spacing: 0.5px;">Time Left: 30s</div>
       </div>
     </div>
 
-    <!-- Active Bidding Console -->
+    <!-- Lower Deck: Bidding Actions Console -->
     <div class="console-panel">
-      <!-- Turn indicator Banner -->
+      <!-- Turn Notification Banner -->
       <div id="turn-banner" class="turn-banner turn-waiting">
         Waiting for Game to Start...
       </div>
 
-      <!-- Construction zone for adding bills to bid -->
+      <!-- Bid selection increase drawer -->
       <div class="bid-construction-zone glass-panel">
         <div class="zone-label">
-          <span>Your Selected Increase</span>
+          <span>Increase Table Bid</span>
           <span id="selected-bid-total" class="gold-text">$0k</span>
         </div>
         <!-- Selected cards tray -->
         <div id="selected-bills-tray" class="selected-bills-tray">
-          <div style="font-size: 0.8rem; opacity: 0.5;">Click money cards below to add to your bid...</div>
+          <div style="font-size: 0.8rem; opacity: 0.5;">Select banknotes below to increase your bid...</div>
         </div>
       </div>
 
-      <!-- Action buttons -->
+      <!-- Submit and Pass Button actions -->
       <div class="bid-actions-row">
         <button id="submit-bid-btn" class="btn-primary" disabled>Submit Bid</button>
         <button id="pass-btn" class="btn-danger" disabled>Pass</button>
@@ -73,18 +119,58 @@
       <div id="action-error-msg" style="color: #ff4d4d; font-size: 0.8rem; text-align: center; margin-top: -5px; display: none;"></div>
     </div>
 
-    <!-- Private hand -->
+    <!-- Private Banknotes Hand of Cards -->
     <div class="private-hand-panel">
-      <div class="hand-label">Your Private Hand (Hidden)</div>
+      <div class="hand-label" style="display:flex; justify-content:space-between;">
+        <span>Your Banknotes Hand (Private)</span>
+        <span id="my-theft-status" style="color: #ff9999; font-weight:bold; display:none;">⚠️ Pending Theft: 1</span>
+      </div>
       <div class="bills-scroll-wrapper">
         <div id="bills-container" class="bills-container">
-          <!-- Render bills here dynamically -->
+          <!-- Banknote cards rendered dynamically here -->
         </div>
       </div>
     </div>
+
+    <!-- Native Collapsible Game Chronicles Ticker -->
+    <details class="chronicles-details glass-panel" style="margin-top: 5px;">
+      <summary class="luxury-text gold-text" style="cursor: pointer; font-size: 0.85rem; outline:none; user-select: none;">
+        📜 GAME CHRONICLES TICKER
+      </summary>
+      <div id="log-ticker" class="log-ticker" style="max-height: 100px; overflow-y: auto; margin-top: 10px; display:flex; flex-direction:column; gap:8px;">
+        <div style="font-size: 0.8rem; opacity: 0.4;">Chronicle entries will populate as bidding triggers...</div>
+      </div>
+    </details>
   </div>
 
-  <!-- Socket.io and Client Script -->
+  <!-- ==========================================================================
+       3. FINAL GAME SCOREBOARD RESULTS OVERLAY
+       ========================================================================== -->
+  <div id="finish-screen" class="finish-overlay" style="display: none;">
+    <div class="finish-card glass-panel float-animation" style="max-width: 600px; width: 100%;">
+      <h1 class="finish-title gold-text">The Grand Standings</h1>
+      <div class="finish-subtitle">Ape Aristocracy Rankings</div>
+      
+      <table class="results-table" style="font-size: 0.9rem; margin-bottom: 25px;">
+        <thead>
+          <tr>
+            <th>Rank</th>
+            <th>Aristocrat</th>
+            <th>Score</th>
+            <th>Cash</th>
+            <th>Acquisitions</th>
+          </tr>
+        </thead>
+        <tbody id="results-tbody">
+          <!-- Standings rows rendered dynamically -->
+        </tbody>
+      </table>
+      
+      <button id="restart-btn" class="btn-primary" style="padding: 12px 35px; font-size: 1rem;">Restart New Game</button>
+    </div>
+  </div>
+
+  <!-- Socket.io and Unified Client Script -->
   <script src="/socket.io/socket.io.js"></script>
   <script src="/js/player.js"></script>
 </body>

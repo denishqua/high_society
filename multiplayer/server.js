@@ -23,10 +23,6 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-app.get('/board', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'board.html'));
-});
-
 // STARTING HAND VALUES DEFINED IN THE RULES
 const STARTING_HAND = [1000, 2000, 3000, 4000, 5000, 8000, 10000, 12000, 15000, 20000, 25000];
 
@@ -55,7 +51,7 @@ function getInitialDeck() {
 // GAME STATE
 const gameState = {
   status: "waiting", // waiting, in_progress, round_over, finished
-  players: [],       // list of active players { id, name, hand, tableau, currentBid, hasPassed, pendingTheft, connected, socketId }
+  players: [],       // list of active players { id, name, hand, tableau, currentBid, hasPassed, pendingTheft, connected, socketId, avatar }
   deck: [],
   currentCard: null,
   auctionType: null, // positive, negative
@@ -64,8 +60,11 @@ const gameState = {
   endGameTriggersRevealed: 0,
   gameResults: null,
   gameLog: [],
-  lastRoundResult: null
+  lastRoundResult: null,
+  turnEndsAt: null   // Timestamp of when the active turn expires
 };
+
+let turnTimerInterval = null;
 
 // HELPER: Log message to board & stdout
 function logMessage(text, type = "info") {
@@ -98,6 +97,7 @@ function broadcastState() {
   const publicPlayers = gameState.players.map(p => ({
     id: p.id,
     name: p.name,
+    avatar: p.avatar,
     tableau: p.tableau,
     currentBid: p.currentBid,
     bidTotal: sumArray(p.currentBid),
@@ -106,22 +106,6 @@ function broadcastState() {
     cardsCount: p.hand.length,
     pendingTheft: p.pendingTheft
   }));
-
-  // Emit to board
-  io.emit('boardStateUpdate', {
-    status: gameState.status,
-    players: publicPlayers,
-    currentCard: gameState.currentCard,
-    auctionType: gameState.auctionType,
-    currentPlayerIndex: gameState.currentPlayerIndex,
-    startingPlayerIndex: gameState.startingPlayerIndex,
-    highestBid: getHighestBid(),
-    endGameTriggersRevealed: gameState.endGameTriggersRevealed,
-    gameResults: gameState.gameResults,
-    gameLog: gameState.gameLog,
-    deckCount: gameState.deck.length,
-    lastRoundResult: gameState.lastRoundResult
-  });
 
   // Emit private state to each connected player socket
   gameState.players.forEach(p => {
@@ -139,7 +123,12 @@ function broadcastState() {
         endGameTriggersRevealed: gameState.endGameTriggersRevealed,
         gameResults: gameState.gameResults,
         myPendingTheft: p.pendingTheft,
-        myIndex: gameState.players.indexOf(p)
+        myIndex: gameState.players.indexOf(p),
+        turnEndsAt: gameState.turnEndsAt, // Sync active turn ends timestamp
+        currentPlayerIndex: gameState.status === "in_progress" ? gameState.currentPlayerIndex : -1,
+        gameLog: gameState.gameLog,
+        deckCount: gameState.deck.length,
+        lastRoundResult: gameState.lastRoundResult
       });
     }
   });
@@ -153,6 +142,7 @@ function startNewGame() {
     return;
   }
 
+  clearTurnTimer();
   logMessage("Game is starting! Shuffling deck...", "success");
 
   // Re-init player hands and states
@@ -221,6 +211,9 @@ function startRound() {
   gameState.currentPlayerIndex = gameState.startingPlayerIndex;
   logMessage(`Bidding starts with ${gameState.players[gameState.currentPlayerIndex].name}.`, "info");
   
+  // Start the 30s turn countdown
+  startTurnTimer();
+  
   broadcastState();
 }
 
@@ -237,7 +230,179 @@ function advanceTurn() {
   gameState.currentPlayerIndex = nextIndex;
 }
 
+// SERVER TIMER CONTROLS
+function startTurnTimer() {
+  if (turnTimerInterval) clearInterval(turnTimerInterval);
+  
+  // Set expiration timestamp to 30 seconds from now
+  gameState.turnEndsAt = Date.now() + 30000;
+  
+  turnTimerInterval = setInterval(() => {
+    if (gameState.status !== "in_progress") {
+      clearInterval(turnTimerInterval);
+      return;
+    }
+    
+    // Check if time expired
+    if (Date.now() >= gameState.turnEndsAt) {
+      clearInterval(turnTimerInterval);
+      handleTurnTimeout();
+    }
+  }, 200);
+}
+
+function clearTurnTimer() {
+  if (turnTimerInterval) {
+    clearInterval(turnTimerInterval);
+    turnTimerInterval = null;
+  }
+  gameState.turnEndsAt = null;
+}
+
+function handleTurnTimeout() {
+  const activePlayer = gameState.players[gameState.currentPlayerIndex];
+  logMessage(`⏰ Time expired! ${activePlayer.name} automatically passes.`, "warning");
+  
+  // Execute passing logic
+  executePlayerPass(gameState.currentPlayerIndex);
+}
+
+// CORE REUSABLE PASS AUCTION RESOLUTION HELP
+function executePlayerPass(playerIndex) {
+  const p = gameState.players[playerIndex];
+  p.hasPassed = true;
+  
+  // Turn resolved: stop timer immediately
+  clearTurnTimer();
+
+  // RESOLVE PASS ACTION
+  if (gameState.auctionType === 'positive') {
+    // Return passing player's bid to their hand
+    p.hand.push(...p.currentBid);
+    p.hand.sort((a, b) => a - b);
+    p.currentBid = [];
+
+    // Check how many active players remain
+    const activePlayers = gameState.players.filter(pl => !pl.hasPassed);
+
+    if (activePlayers.length === 1) {
+      // Winner declared!
+      const winner = activePlayers[0];
+      const winningBid = sumArray(winner.currentBid);
+      
+      logMessage(`🎉 ${winner.name} wins the auction for ${gameState.currentCard.name} with a bid of $${winningBid / 1000}k!`, "success");
+
+      // Handle Theft / Passé discard interaction
+      if (gameState.currentCard.type === 'point' && winner.pendingTheft > 0) {
+        winner.pendingTheft--;
+        logMessage(`Theft triggers! ${winner.name}'s new ${gameState.currentCard.name} is immediately stolen/discarded.`, "danger");
+      } else {
+        winner.tableau.push(gameState.currentCard);
+      }
+
+      // Winner pays bid to bank
+      winner.currentBid = [];
+
+      // Save round result
+      gameState.lastRoundResult = {
+        winner: winner.name,
+        card: gameState.currentCard.name,
+        amount: winningBid,
+        type: "positive"
+      };
+
+      // Winner starts the next round
+      gameState.startingPlayerIndex = gameState.players.indexOf(winner);
+      gameState.status = "round_over";
+      
+      // Wait 3.5 seconds before starting the next round for dramatic effect
+      setTimeout(() => {
+        startRound();
+      }, 3500);
+
+    } else if (activePlayers.length === 0) {
+      // Edge Case: If starting player passes immediately and nobody bids
+      logMessage(`Everyone passed! The card ${gameState.currentCard.name} is discarded.`, "warning");
+      
+      gameState.lastRoundResult = {
+        winner: "No one",
+        card: gameState.currentCard.name,
+        amount: 0,
+        type: "positive"
+      };
+
+      // Next starting index advances sequentially
+      gameState.startingPlayerIndex = (gameState.startingPlayerIndex + 1) % gameState.players.length;
+      gameState.status = "round_over";
+      
+      setTimeout(() => {
+        startRound();
+      }, 3500);
+    } else {
+      // Bidding continues - move turn and start next timer
+      advanceTurn();
+      startTurnTimer();
+    }
+
+  } else if (gameState.auctionType === 'negative') {
+    // NEGATIVE AUCTION: First player to pass takes the penalty card, but gets their money back
+    p.hand.push(...p.currentBid);
+    p.hand.sort((a, b) => a - b);
+    p.currentBid = [];
+
+    logMessage(`💥 ${p.name} takes the penalty card ${gameState.currentCard.name} and reclaims their bid.`, "danger");
+
+    // Handle Theft/Passé card trigger
+    if (gameState.currentCard.name === "Passé") {
+      const pointCards = p.tableau.filter(c => c.type === 'point');
+      if (pointCards.length > 0) {
+        // Sort descending and discard highest
+        pointCards.sort((a, b) => b.value - a.value);
+        const discarded = pointCards[0];
+        const idx = p.tableau.findIndex(c => c.name === discarded.name && c.value === discarded.value);
+        p.tableau.splice(idx, 1);
+        logMessage(`Passé triggers! ${p.name} discards their most valuable card: ${discarded.name}.`, "danger");
+      } else {
+        p.pendingTheft++;
+        logMessage(`Passé triggers, but ${p.name} has no point cards! A pending theft is recorded.`, "danger");
+      }
+    } else {
+      p.tableau.push(gameState.currentCard);
+    }
+
+    // EVERYONE ELSE pays their table bid to the bank!
+    gameState.players.forEach(other => {
+      if (other !== p) {
+        const forfeitedBid = sumArray(other.currentBid);
+        if (forfeitedBid > 0) {
+          logMessage(`${other.name} forfeits $${forfeitedBid / 1000}k to avoid the penalty.`, "warning");
+        }
+        other.currentBid = [];
+      }
+    });
+
+    // Save round result
+    gameState.lastRoundResult = {
+      winner: p.name,
+      card: gameState.currentCard.name,
+      amount: 0,
+      type: "negative"
+    };
+
+    // Passing player starts the next round
+    gameState.startingPlayerIndex = playerIndex;
+    gameState.status = "round_over";
+
+    setTimeout(() => {
+      startRound();
+    }, 3500);
+  }
+
+  broadcastState();
+}
+
 function endGame() {
+  clearTurnTimer();
   gameState.status = "finished";
   logMessage("Game over! Calculating final standings...", "success");
 
@@ -289,6 +454,7 @@ function endGame() {
   const rankings = [];
   const eliminatedList = eliminatedPlayers.map(p => ({
     name: p.name,
+    avatar: p.avatar,
     score: calculateScore(p),
     cash: sumArray(p.hand),
     eliminated: true,
@@ -307,6 +473,7 @@ function endGame() {
       return {
         player: p,
         name: p.name,
+        avatar: p.avatar,
         score,
         cash,
         highestPointCard,
@@ -325,6 +492,7 @@ function endGame() {
       rankings.push({
         rank: index + 1,
         name: item.name,
+        avatar: item.avatar,
         score: item.score,
         cash: item.cash,
         eliminated: false,
@@ -352,14 +520,8 @@ function endGame() {
 io.on('connection', (socket) => {
   console.log(`Socket connected: ${socket.id}`);
 
-  // 1. BOARD REGISTRATION
-  socket.on('registerBoard', () => {
-    console.log(`Board registered on socket: ${socket.id}`);
-    broadcastState();
-  });
-
   // 2. PLAYER JOIN / RECONNECT
-  socket.on('joinPlayer', ({ name, playerId }) => {
+  socket.on('joinPlayer', ({ name, playerId, avatar }) => {
     let player = null;
     let isReconnect = false;
 
@@ -395,6 +557,7 @@ io.on('connection', (socket) => {
       player = {
         id: newPlayerId,
         name: cleanName,
+        avatar: avatar || "👑", // Store selected avatar
         hand: [...STARTING_HAND],
         tableau: [],
         currentBid: [],
@@ -408,7 +571,7 @@ io.on('connection', (socket) => {
       logMessage(`${cleanName} joined the game lobby.`, "success");
     }
 
-    socket.emit('joinSuccess', { playerId: player.id, name: player.name });
+    socket.emit('joinSuccess', { playerId: player.id, name: player.name, avatar: player.avatar });
     broadcastState();
   });
 
@@ -500,8 +663,9 @@ io.on('connection', (socket) => {
 
     logMessage(`${p.name} raised their bid to $${newTotalBid / 1000}k (+ $${addedBidSum / 1000}k).`, "bid");
 
-    // Advance turn
+    // Advance turn and trigger next turn timer
     advanceTurn();
+    startTurnTimer();
     broadcastState();
   });
 
@@ -525,132 +689,8 @@ io.on('connection', (socket) => {
       return;
     }
 
-    p.hasPassed = true;
-    logMessage(`${p.name} passes.`, "pass");
-
-    // RESOLVE PASS ACTION
-    if (gameState.auctionType === 'positive') {
-      // Return passing player's bid to their hand
-      p.hand.push(...p.currentBid);
-      p.hand.sort((a, b) => a - b);
-      p.currentBid = [];
-
-      // Check how many active players remain
-      const activePlayers = gameState.players.filter(pl => !pl.hasPassed);
-
-      if (activePlayers.length === 1) {
-        // Winner declared!
-        const winner = activePlayers[0];
-        const winningBid = sumArray(winner.currentBid);
-        
-        logMessage(`🎉 ${winner.name} wins the auction for ${gameState.currentCard.name} with a bid of $${winningBid / 1000}k!`, "success");
-
-        // Handle Theft / Passé discard interaction
-        if (gameState.currentCard.type === 'point' && winner.pendingTheft > 0) {
-          winner.pendingTheft--;
-          logMessage(`Theft triggers! ${winner.name}'s new ${gameState.currentCard.name} is immediately stolen/discarded.`, "danger");
-        } else {
-          winner.tableau.push(gameState.currentCard);
-        }
-
-        // Winner pays bid to bank
-        winner.currentBid = [];
-
-        // Save round result
-        gameState.lastRoundResult = {
-          winner: winner.name,
-          card: gameState.currentCard.name,
-          amount: winningBid,
-          type: "positive"
-        };
-
-        // Winner starts the next round
-        gameState.startingPlayerIndex = gameState.players.indexOf(winner);
-        gameState.status = "round_over";
-        
-        // Wait 3.5 seconds before starting the next round for dramatic effect
-        setTimeout(() => {
-          startRound();
-        }, 3500);
-
-      } else if (activePlayers.length === 0) {
-        // Edge Case: If starting player passes immediately and nobody bids
-        logMessage(`Everyone passed! The card ${gameState.currentCard.name} is discarded.`, "warning");
-        
-        gameState.lastRoundResult = {
-          winner: "No one",
-          card: gameState.currentCard.name,
-          amount: 0,
-          type: "positive"
-        };
-
-        // Next starting index advances sequentially
-        gameState.startingPlayerIndex = (gameState.startingPlayerIndex + 1) % gameState.players.length;
-        gameState.status = "round_over";
-        
-        setTimeout(() => {
-          startRound();
-        }, 3500);
-      } else {
-        // Bidding continues
-        advanceTurn();
-      }
-
-    } else if (gameState.auctionType === 'negative') {
-      // NEGATIVE AUCTION: First player to pass takes the penalty card, but gets their money back
-      p.hand.push(...p.currentBid);
-      p.hand.sort((a, b) => a - b);
-      p.currentBid = [];
-
-      logMessage(`💥 ${p.name} takes the penalty card ${gameState.currentCard.name} and reclaims their bid.`, "danger");
-
-      // Handle Theft/Passé card trigger
-      if (gameState.currentCard.name === "Passé") {
-        const pointCards = p.tableau.filter(c => c.type === 'point');
-        if (pointCards.length > 0) {
-          // Sort descending and discard highest
-          pointCards.sort((a, b) => b.value - a.value);
-          const discarded = pointCards[0];
-          const idx = p.tableau.findIndex(c => c.name === discarded.name && c.value === discarded.value);
-          p.tableau.splice(idx, 1);
-          logMessage(`Passé triggers! ${p.name} discards their most valuable card: ${discarded.name}.`, "danger");
-        } else {
-          p.pendingTheft++;
-          logMessage(`Passé triggers, but ${p.name} has no point cards! A pending theft is recorded.`, "danger");
-        }
-      } else {
-        p.tableau.push(gameState.currentCard);
-      }
-
-      // EVERYONE ELSE pays their table bid to the bank!
-      gameState.players.forEach(other => {
-        if (other !== p) {
-          const forfeitedBid = sumArray(other.currentBid);
-          if (forfeitedBid > 0) {
-            logMessage(`${other.name} forfeits $${forfeitedBid / 1000}k to avoid the penalty.`, "warning");
-          }
-          other.currentBid = [];
-        }
-      });
-
-      // Save round result
-      gameState.lastRoundResult = {
-        winner: p.name,
-        card: gameState.currentCard.name,
-        amount: 0,
-        type: "negative"
-      };
-
-      // Passing player starts the next round
-      gameState.startingPlayerIndex = playerIndex;
-      gameState.status = "round_over";
-
-      setTimeout(() => {
-        startRound();
-      }, 3500);
-    }
-
-    broadcastState();
+    // Re-use common pass engine
+    executePlayerPass(playerIndex);
   });
 
   // 6. CLIENT DISCONNECTION

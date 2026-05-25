@@ -1,55 +1,111 @@
 const socket = io();
 
+// APE ARISTOCRACY DEFAULT NAMES
+const DEFAULT_NAMES = [
+  "Archduke Orangutan", "Duchess Chimpanzee", "Baroness Baboon", 
+  "Count Gibbon", "Lord Gorilla", "Viscount Mandrill", 
+  "Lady Lemur", "Sir Chimp", "Countess Marmoset", "Marquise Macaque",
+  "Baron Capuchin", "Duke Mandrill", "Lady Tamarin", "Earl Baboon"
+];
+
 // STATE OBJECT
 const clientState = {
   playerId: null,
   playerName: null,
+  avatar: "🦁", // Default selected avatar
   hand: [],
   selectedCards: [],
   isMyTurn: false,
   myBidTotal: 0,
   highestBid: 0,
   auctionType: null,
-  status: "waiting"
+  status: "waiting",
+  hadTurn: false // Lock to play turn audio chime only once
 };
 
-// HTML ELEMENTS
+// HTML ELEMENTS BINDINGS
 const joinView = document.getElementById('join-view');
 const gameView = document.getElementById('game-view');
 const playerNameInput = document.getElementById('player-name');
 const joinBtn = document.getElementById('join-btn');
 const joinError = document.getElementById('join-error');
+const avatarItems = document.querySelectorAll('.avatar-item');
+const lobbyRosterSection = document.getElementById('lobby-roster-section');
+const lobbyPlayersList = document.getElementById('lobby-players-list');
+const lobbyActionRow = document.getElementById('lobby-action-row');
 
-const myDisplayName = document.getElementById('my-display-name');
-const myTheftStatus = document.getElementById('my-theft-status');
-const connBadge = document.getElementById('conn-badge');
+const deckCountBadge = document.getElementById('deck-count-badge');
+const triggersCountBadge = document.getElementById('triggers-count-badge');
+const playersDashboard = document.getElementById('players-dashboard');
+const auctionStageInfo = document.getElementById('auction-stage-info');
 const cardStage = document.getElementById('card-stage');
-const auctionBiddingStatus = document.getElementById('auction-bidding-status');
+const highestBidBadge = document.getElementById('highest-bid-badge');
+const turnTimerContainer = document.getElementById('turn-timer-container');
+const turnTimerBar = document.getElementById('turn-timer-bar');
+const turnTimerText = document.getElementById('turn-timer-text');
+
 const turnBanner = document.getElementById('turn-banner');
 const selectedBillsTray = document.getElementById('selected-bills-tray');
 const selectedBidTotal = document.getElementById('selected-bid-total');
 const submitBidBtn = document.getElementById('submit-bid-btn');
 const passBtn = document.getElementById('pass-btn');
 const actionErrorMsg = document.getElementById('action-error-msg');
+const myTheftStatus = document.getElementById('my-theft-status');
 const billsContainer = document.getElementById('bills-container');
+const logTicker = document.getElementById('log-ticker');
+
+const finishScreen = document.getElementById('finish-screen');
+const resultsTbody = document.getElementById('results-tbody');
+const restartBtn = document.getElementById('restart-btn');
+
+let countdownInterval = null;
 
 // ==========================================================================
 // SESSION MANAGEMENT (LOBBY / RECONNECT)
 // ==========================================================================
 
-// Check for existing player session
 window.addEventListener('DOMContentLoaded', () => {
-  const cachedId = localStorage.getItem('highSocietyPlayerId');
+  // Pre-populate with random fun name
   const cachedName = localStorage.getItem('highSocietyPlayerName');
+  if (cachedName) {
+    playerNameInput.value = cachedName;
+  } else {
+    const randomName = DEFAULT_NAMES[Math.floor(Math.random() * DEFAULT_NAMES.length)];
+    playerNameInput.value = randomName;
+  }
 
+  // Pre-select avatar from cache if exists
+  const cachedAvatar = localStorage.getItem('highSocietyPlayerAvatar');
+  if (cachedAvatar) {
+    clientState.avatar = cachedAvatar;
+    avatarItems.forEach(item => {
+      if (item.getAttribute('data-avatar') === cachedAvatar) {
+        item.classList.add('selected');
+      } else {
+        item.classList.remove('selected');
+      }
+    });
+  }
+
+  // Auto reconnect
+  const cachedId = localStorage.getItem('highSocietyPlayerId');
   if (cachedId && cachedName) {
     clientState.playerId = cachedId;
     clientState.playerName = cachedName;
-    socket.emit('joinPlayer', { name: cachedName, playerId: cachedId });
+    socket.emit('joinPlayer', { name: cachedName, playerId: cachedId, avatar: clientState.avatar });
   }
 });
 
-// Join Button click handler
+// Avatar selection click grid triggers
+avatarItems.forEach(item => {
+  item.addEventListener('click', () => {
+    avatarItems.forEach(i => i.classList.remove('selected'));
+    item.classList.add('selected');
+    clientState.avatar = item.getAttribute('data-avatar');
+    localStorage.setItem('highSocietyPlayerAvatar', clientState.avatar);
+  });
+});
+
 joinBtn.addEventListener('click', joinGame);
 playerNameInput.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') joinGame();
@@ -62,7 +118,7 @@ function joinGame() {
     return;
   }
   joinBtn.disabled = true;
-  socket.emit('joinPlayer', { name });
+  socket.emit('joinPlayer', { name, avatar: clientState.avatar });
 }
 
 function showJoinError(msg) {
@@ -71,16 +127,19 @@ function showJoinError(msg) {
   joinBtn.disabled = false;
 }
 
-// Socket responses for Join requests
-socket.on('joinSuccess', ({ playerId, name }) => {
+// Socket responses
+socket.on('joinSuccess', ({ playerId, name, avatar }) => {
   localStorage.setItem('highSocietyPlayerId', playerId);
   localStorage.setItem('highSocietyPlayerName', name);
+  localStorage.setItem('highSocietyPlayerAvatar', avatar);
   clientState.playerId = playerId;
   clientState.playerName = name;
+  clientState.avatar = avatar;
 
-  joinView.style.display = 'none';
-  gameView.style.display = 'flex';
-  myDisplayName.textContent = name;
+  joinError.style.display = 'none';
+  lobbyRosterSection.style.display = 'block';
+  joinBtn.style.display = 'none';
+  playerNameInput.disabled = true;
 });
 
 socket.on('joinFailed', (msg) => {
@@ -98,26 +157,17 @@ socket.on('kicked', () => {
 
   gameView.style.display = 'none';
   joinView.style.display = 'block';
+  lobbyRosterSection.style.display = 'none';
+  joinBtn.style.display = 'block';
   joinBtn.disabled = false;
+  playerNameInput.disabled = false;
+  
+  // Pick new name
+  playerNameInput.value = DEFAULT_NAMES[Math.floor(Math.random() * DEFAULT_NAMES.length)];
+  
   showJoinError("You were kicked from the lobby by the host.");
 });
 
-// Connection state notifications
-socket.on('connect', () => {
-  connBadge.textContent = "Connected";
-  connBadge.className = "player-status-badge badge-connected";
-  // If already registered, re-join
-  if (clientState.playerId) {
-    socket.emit('joinPlayer', { name: clientState.playerName, playerId: clientState.playerId });
-  }
-});
-
-socket.on('disconnect', () => {
-  connBadge.textContent = "Disconnected";
-  connBadge.className = "player-status-badge badge-disconnected";
-});
-
-// Action failures from the server
 socket.on('actionError', (msg) => {
   actionErrorMsg.textContent = msg;
   actionErrorMsg.style.display = 'block';
@@ -127,7 +177,43 @@ socket.on('actionError', (msg) => {
 });
 
 // ==========================================================================
-// RENDER & UI COORDINATION
+// AUDIO SYNTHESIS cue (WEB AUDIO API)
+// ==========================================================================
+
+function playTurnChime() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    
+    // Play dual oscillator tone bell chord
+    const playTone = (freq, delay, duration, volume) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, ctx.currentTime + delay);
+      
+      gain.gain.setValueAtTime(0, ctx.currentTime + delay);
+      gain.gain.linearRampToValueAtTime(volume, ctx.currentTime + delay + 0.04);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + duration);
+      
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      
+      osc.start(ctx.currentTime + delay);
+      osc.stop(ctx.currentTime + delay + duration);
+    };
+    
+    // synthesized elegant crystal chord strike: E5 & B5 & E6
+    playTone(659.25, 0, 1.4, 0.2); // E5
+    playTone(987.77, 0.05, 1.2, 0.15); // B5
+    playTone(1318.51, 0.1, 1.0, 0.1); // E6
+  } catch (e) {
+    console.warn("Audio context chime was blocked or not supported:", e);
+  }
+}
+
+// ==========================================================================
+// REAL-TIME RENDER ENGINE
 // ==========================================================================
 
 socket.on('playerStateUpdate', (state) => {
@@ -138,58 +224,161 @@ socket.on('playerStateUpdate', (state) => {
   clientState.auctionType = state.auctionType;
   clientState.status = state.status;
 
-  // Render theft status
-  if (state.myPendingTheft > 0) {
-    myTheftStatus.textContent = `Pending Theft: ${state.myPendingTheft}`;
-    myTheftStatus.style.display = 'block';
-  } else {
-    myTheftStatus.style.display = 'none';
+  // Lobby rendering if waiting
+  if (state.status === "waiting") {
+    joinView.style.display = 'block';
+    gameView.style.display = 'none';
+    finishScreen.style.display = 'none';
+    renderLobbyRoster(state.players);
+    return;
   }
 
-  // If it's not my turn, force clear selected cards buffer
+  // Active game view trigger
+  joinView.style.display = 'none';
+  gameView.style.display = 'flex';
+
+  // Chime trigger exactly once when turn starts
+  if (state.isMyTurn) {
+    if (!clientState.hadTurn) {
+      clientState.hadTurn = true;
+      playTurnChime();
+    }
+  } else {
+    clientState.hadTurn = false;
+  }
+
+  // Clear local selected cards buffer if turn transitions away
   if (!state.isMyTurn) {
     clientState.selectedCards = [];
   }
 
-  // 1. Render Current Card
-  renderAuctionCard(state.currentCard, state.auctionType, state.status);
+  // 1. Header counts
+  deckCountBadge.textContent = `Cards: ${state.deckCount}`;
+  triggersCountBadge.textContent = `Triggers: ${state.endGameTriggersRevealed}/4`;
 
-  // 2. Render Turn Banner
-  renderTurnBanner(state.isMyTurn, state.currentPlayerName, state.status, state.gameResults);
+  // 2. Collapsible Chronicles Logs
+  renderLogsTicker(state.gameLog);
 
-  // 3. Render Hand Bills
+  // 3. Leaderboard Overlay if Finished
+  if (state.status === "finished") {
+    renderLeaderboard(state.gameResults);
+    clearInterval(countdownInterval);
+    turnTimerContainer.style.display = 'none';
+    return;
+  } else {
+    finishScreen.style.display = 'none';
+  }
+
+  // 4. Seats Dashboard Grid (Upper Deck)
+  renderPlayerSeats(state.players, state.currentPlayerIndex);
+
+  // 5. Central Card rendering
+  renderAuctionCard(state.currentCard, state.auctionType, state.status, state.players);
+
+  // 6. Turn countdown ticking
+  startCountdown(state.turnEndsAt, state.status);
+
+  // 7. Console action updating
+  renderTurnBanner(state.isMyTurn, state.currentPlayerName, state.status);
   renderHand(state.hand, state.isMyTurn);
-
-  // 4. Update Trays & Buttons
   updateBiddingControls();
 });
 
-// Render the big luxury card in the round stage
-function renderAuctionCard(card, type, status) {
-  if (status === "waiting") {
-    cardStage.innerHTML = `<div style="font-size: 0.9rem; opacity: 0.6; padding: 20px;">Waiting for host to start game...</div>`;
-    auctionBiddingStatus.style.display = 'none';
-    return;
+// Render waiting roster
+function renderLobbyRoster(players) {
+  // Update roster players
+  lobbyPlayersList.innerHTML = players.map(p => `
+    <div class="mini-card" style="padding: 6px 12px; font-size: 0.9rem; display: flex; align-items: center; gap: 6px;">
+      <span>${p.avatar} ${p.name}</span>
+      ${p.id !== clientState.playerId && players[0].id === clientState.playerId
+        ? `<span class="kick-btn" data-id="${p.id}" style="color: #ff4d4d; font-weight: bold; cursor: pointer; margin-left: 4px;">&times;</span>`
+        : ''
+      }
+    </div>
+  `).join("");
+
+  // Kick buttons hook
+  const kickBtns = lobbyPlayersList.querySelectorAll('.kick-btn');
+  kickBtns.forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const pId = e.target.getAttribute('data-id');
+      socket.emit('kickPlayer', { playerId: pId });
+    });
+  });
+
+  // Start game controls
+  const isLeader = players.length > 0 && players[0].id === clientState.playerId;
+  if (isLeader) {
+    if (players.length >= 3) {
+      lobbyActionRow.innerHTML = `<button id="start-game-btn" class="btn-primary" style="padding: 12px 30px; font-size: 0.95rem;">Start Game Session</button>`;
+      const startBtn = document.getElementById('start-game-btn');
+      startBtn.addEventListener('click', () => socket.emit('startGame'));
+    } else {
+      lobbyActionRow.innerHTML = `<div style="font-size: 0.8rem; color: var(--gold-primary); font-weight:600; text-transform: uppercase;">Awaiting Players (${players.length}/5)...</div>`;
+    }
+  } else {
+    lobbyActionRow.innerHTML = `<div style="font-size: 0.8rem; opacity: 0.7;">Waiting for lobby leader ${players[0] ? players[0].name : ''} to start...</div>`;
   }
+}
+
+// Render player seats dashboard
+function renderPlayerSeats(players, currentPlayerIndex) {
+  playersDashboard.innerHTML = "";
   
-  if (status === "finished") {
-    cardStage.innerHTML = `<div style="font-size: 1.1rem; color: var(--gold-primary); font-weight: 700; padding: 20px;">GAME OVER</div>`;
-    auctionBiddingStatus.style.display = 'none';
-    return;
-  }
+  players.forEach((p, idx) => {
+    const isCurrentTurn = idx === currentPlayerIndex;
+    const seatCard = document.createElement('div');
+    seatCard.className = `player-seat-card${isCurrentTurn ? ' active-turn' : ''}${p.hasPassed ? ' passed' : ''}`;
+    
+    // Online dot
+    const connDot = `<span class="dot-status${p.connected ? '' : ' offline'}"></span>`;
+    
+    // tableau HTML
+    const tableauHTML = p.tableau.map(c => `
+      <span class="player-seat-mini-card${c.type === 'penalty' ? ' penalty' : ''}">${c.name}</span>
+    `).join("");
 
+    seatCard.innerHTML = `
+      ${connDot}
+      <div class="player-seat-avatar">${p.avatar}</div>
+      <div class="player-seat-name">${p.name}</div>
+      <div class="player-seat-bid">${p.bidTotal > 0 ? `$${p.bidTotal/1000}k` : '$0'}</div>
+      <div class="player-seat-cards" style="width: 100%;">
+        ${tableauHTML || '<span style="font-size:0.55rem; opacity:0.35; font-style:italic;">No assets</span>'}
+      </div>
+      <div style="font-size: 0.55rem; opacity: 0.6; margin-top: 4px; font-weight: bold;">Hand: ${p.cardsCount} cards</div>
+      ${p.pendingTheft > 0 ? `<div style="color:#ff9999; font-size:0.5rem; font-weight:bold; margin-top:2px;">THEFT: ${p.pendingTheft}</div>` : ''}
+    `;
+
+    playersDashboard.appendChild(seatCard);
+  });
+}
+
+// Render active card Stage
+function renderAuctionCard(card, type, status, players) {
   if (!card) {
-    cardStage.innerHTML = `<div style="font-size: 0.9rem; opacity: 0.6; padding: 20px;">Preparing next round...</div>`;
-    auctionBiddingStatus.style.display = 'none';
+    cardStage.innerHTML = `<div style="font-size: 0.9rem; opacity: 0.6; padding: 15px;">Preparing next round...</div>`;
+    highestBidBadge.style.display = 'none';
     return;
   }
 
-  auctionBiddingStatus.style.display = 'block';
-  auctionBiddingStatus.innerHTML = `
-    Highest Bid on Table: <strong>$${clientState.highestBid / 1000}k</strong><br>
-    Your Active Bid: <strong>$${clientState.myBidTotal / 1000}k</strong>
+  highestBidBadge.style.display = 'block';
+
+  // Find who has the highest bid
+  let bidderName = "No one";
+  if (clientState.highestBid > 0) {
+    const topBidder = players.find(p => p.bidTotal === clientState.highestBid && !p.hasPassed);
+    if (topBidder) bidderName = topBidder.name;
+  }
+
+  highestBidBadge.innerHTML = `
+    Highest Bid on Table: <strong style="color: #60a5fa;">$${clientState.highestBid / 1000}k</strong> (by <strong>${bidderName}</strong>)<br>
+    Your Committed Bid: <strong>$${clientState.myBidTotal / 1000}k</strong>
   `;
 
+  const isPositive = type === 'positive';
+  auctionStageInfo.textContent = isPositive ? "Bidding to ACQUIRE" : "Bidding to AVOID";
+  
   let typeText = "Luxury Point";
   if (card.type === 'multiplier') typeText = "Multiplier (Double)";
   if (card.type === 'penalty') {
@@ -198,7 +387,6 @@ function renderAuctionCard(card, type, status) {
     else typeText = "Disgrace (-5 points)";
   }
 
-  const isPositive = type === 'positive';
   const cardClass = isPositive ? 'positive' : 'negative';
   
   // Format central value
@@ -218,31 +406,54 @@ function renderAuctionCard(card, type, status) {
   `;
 }
 
-// Render player turn messages
-function renderTurnBanner(isMyTurn, activeName, status, gameResults) {
+// 30s COUNTDOWN SYSTEM
+function startCountdown(turnEndsAt, status) {
+  if (countdownInterval) clearInterval(countdownInterval);
+  
+  if (!turnEndsAt || status !== "in_progress") {
+    turnTimerContainer.style.display = 'none';
+    return;
+  }
+
+  turnTimerContainer.style.display = 'block';
+
+  const tick = () => {
+    const remaining = Math.max(0, turnEndsAt - Date.now());
+    const pct = (remaining / 30000) * 100;
+    const sec = Math.ceil(remaining / 1000);
+    
+    turnTimerBar.style.width = `${pct}%`;
+    turnTimerText.textContent = `Time Left: ${sec}s`;
+    
+    if (sec <= 8) {
+      turnTimerBar.style.background = '#ff4d4d';
+      turnTimerText.style.color = '#ff9999';
+    } else {
+      turnTimerBar.style.background = 'linear-gradient(90deg, #5cd699 0%, #dfba59 60%, #ff4d4d 100%)';
+      turnTimerText.style.color = '#fff';
+    }
+    
+    if (remaining <= 0) {
+      clearInterval(countdownInterval);
+    }
+  };
+
+  tick();
+  countdownInterval = setInterval(tick, 100);
+}
+
+// Render player controls
+function renderTurnBanner(isMyTurn, activeName, status) {
   turnBanner.className = "turn-banner";
   
-  if (status === "waiting") {
-    turnBanner.textContent = "Waiting in lobby...";
-    turnBanner.classList.add("turn-waiting");
-    return;
-  }
-
-  if (status === "finished") {
-    const winner = gameResults && gameResults.rankings.length > 0 ? gameResults.rankings[0].name : "No one";
-    turnBanner.innerHTML = `Game Over! Winner: <strong>${winner}</strong>`;
-    turnBanner.classList.add("turn-mine");
-    return;
-  }
-
   if (status === "round_over") {
-    turnBanner.textContent = "Round complete! Preparing next round...";
+    turnBanner.textContent = "Round resolved! Processing payouts...";
     turnBanner.classList.add("turn-waiting");
     return;
   }
 
   if (isMyTurn) {
-    turnBanner.textContent = "YOUR TURN! SUBMIT A BID OR PASS.";
+    turnBanner.textContent = "YOUR TURN! RAISE THE BID OR PASS.";
     turnBanner.classList.add("turn-mine");
   } else {
     turnBanner.textContent = `Waiting for ${activeName || "another player"}...`;
@@ -250,21 +461,15 @@ function renderTurnBanner(isMyTurn, activeName, status, gameResults) {
   }
 }
 
-// Render the 11 banknotes starting hand
 function renderHand(hand, isMyTurn) {
   billsContainer.innerHTML = "";
   
   if (hand.length === 0) {
-    billsContainer.innerHTML = `<div style="font-size: 0.85rem; opacity: 0.5; padding: 15px;">Your hand is empty.</div>`;
+    billsContainer.innerHTML = `<div style="font-size: 0.8rem; opacity: 0.5; padding: 10px;">Empty hand</div>`;
     return;
   }
 
   hand.forEach((cardVal, index) => {
-    const isSelected = clientState.selectedCards.includes(cardVal) && 
-                       (clientState.selectedCards.filter(c => c === cardVal).length >= 
-                        clientState.selectedCards.filter((c, i) => clientState.hand[i] === cardVal).length);
-    
-    // Manage duplicate bill selections cleanly
     const duplicateCountInHand = hand.filter(v => v === cardVal).length;
     const occurrenceIndexInHand = hand.slice(0, index + 1).filter(v => v === cardVal).length;
     const occurrenceSelectedCount = clientState.selectedCards.filter(v => v === cardVal).length;
@@ -289,7 +494,6 @@ function renderHand(hand, isMyTurn) {
   });
 }
 
-// Select / Unselect bill
 function toggleBillSelection(value, isAlreadySelected) {
   if (isAlreadySelected) {
     const idx = clientState.selectedCards.indexOf(value);
@@ -300,25 +504,22 @@ function toggleBillSelection(value, isAlreadySelected) {
     clientState.selectedCards.push(value);
   }
   
-  // Re-render hand and tray update
   renderHand(clientState.hand, clientState.isMyTurn);
   updateBiddingControls();
 }
 
-// Update the Selected Bid Tray UI and validate the submit buttons
 function updateBiddingControls() {
   selectedBillsTray.innerHTML = "";
   
   const increaseSum = clientState.selectedCards.reduce((sum, val) => sum + val, 0);
   const totalProposedBid = clientState.myBidTotal + increaseSum;
 
-  selectedBidTotal.innerHTML = `$${increaseSum / 1000}k <span style="font-size: 0.8rem; font-weight: normal; opacity: 0.7;">(Total Bid: $${totalProposedBid / 1000}k)</span>`;
+  selectedBidTotal.innerHTML = `$${increaseSum / 1000}k <span style="font-size: 0.75rem; font-weight: normal; opacity: 0.7;">(Total Bid: $${totalProposedBid / 1000}k)</span>`;
 
   if (clientState.selectedCards.length === 0) {
-    selectedBillsTray.innerHTML = `<div style="font-size: 0.8rem; opacity: 0.5;">Click money cards below to add to your bid...</div>`;
+    selectedBillsTray.innerHTML = `<div style="font-size: 0.75rem; opacity: 0.4;">Select money cards below to add to your bid...</div>`;
     submitBidBtn.disabled = true;
   } else {
-    // Show selected bills in the tray
     clientState.selectedCards.sort((a,b) => a - b).forEach(val => {
       const miniBill = document.createElement('div');
       miniBill.className = 'mini-card';
@@ -330,7 +531,6 @@ function updateBiddingControls() {
       selectedBillsTray.appendChild(miniBill);
     });
 
-    // Enforce raise validation rule
     if (clientState.isMyTurn && clientState.status === "in_progress") {
       submitBidBtn.disabled = totalProposedBid <= clientState.highestBid;
     } else {
@@ -338,7 +538,6 @@ function updateBiddingControls() {
     }
   }
 
-  // Turn-based main button status
   if (clientState.isMyTurn && clientState.status === "in_progress") {
     passBtn.disabled = false;
   } else {
@@ -347,10 +546,87 @@ function updateBiddingControls() {
   }
 }
 
+// LOGS RENDERING
+function renderLogsTicker(logs) {
+  logTicker.innerHTML = "";
+  if (logs.length === 0) {
+    logTicker.innerHTML = `<div style="font-size: 0.75rem; opacity: 0.4;">Chronicle entries will populate as bidding triggers...</div>`;
+    return;
+  }
+  logs.forEach(log => {
+    const item = document.createElement('div');
+    item.className = `log-entry ${log.type}`;
+    item.innerHTML = `
+      <span class="time">${log.timestamp}</span>
+      <span>${log.text}</span>
+    `;
+    logTicker.appendChild(item);
+  });
+  logTicker.scrollTop = logTicker.scrollHeight;
+}
+
+socket.on('logUpdate', (log) => {
+  // If collapsible logger is rendered, append log
+  const existingLogItems = logTicker.querySelectorAll('.log-entry');
+  if (existingLogItems.length > 50) {
+    logTicker.removeChild(existingLogItems[0]);
+  }
+  
+  const item = document.createElement('div');
+  item.className = `log-entry ${log.type}`;
+  item.innerHTML = `
+    <span class="time">${log.timestamp}</span>
+    <span>${log.text}</span>
+  `;
+  logTicker.appendChild(item);
+  logTicker.scrollTop = logTicker.scrollHeight;
+});
+
 // ==========================================================================
-// ACTIONS ACTIONS
+// RESULTS / LEADERBOARD SCOREBOARD
 // ==========================================================================
 
+function renderLeaderboard(results) {
+  if (!results) return;
+
+  resultsTbody.innerHTML = "";
+  finishScreen.style.display = 'flex';
+
+  results.rankings.forEach(p => {
+    const assetsHTML = p.tableau.map(c => `
+      <span class="mini-card${c.type === 'penalty' ? ' penalty' : ''}">${c.name}</span>
+    `).join(" ");
+
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td><strong>#${p.rank}</strong></td>
+      <td style="color: var(--gold-primary); font-weight: 700;">${p.avatar} ${p.name}</td>
+      <td style="font-weight: 800;">${p.score} pts</td>
+      <td>$${p.cash / 1000}k</td>
+      <td><div style="display:flex; gap:3px; flex-wrap:wrap;">${assetsHTML || '<span style="opacity:0.4;">None</span>'}</div></td>
+    `;
+    resultsTbody.appendChild(row);
+  });
+
+  results.eliminated.forEach(p => {
+    const assetsHTML = p.tableau.map(c => `
+      <span class="mini-card${c.type === 'penalty' ? ' penalty' : ''}">${c.name}</span>
+    `).join(" ");
+
+    const row = document.createElement('tr');
+    row.className = "eliminated-row";
+    row.innerHTML = `
+      <td><span class="badge-eliminated">OUT</span></td>
+      <td style="text-decoration: line-through;">💀 ${p.avatar} ${p.name}</td>
+      <td>${p.score} pts</td>
+      <td style="font-weight: bold; color: #ff9999;">$${p.cash / 1000}k (Least Cash)</td>
+      <td><div style="display:flex; gap:3px; flex-wrap:wrap; filter: grayscale(1);">${assetsHTML || '<span style="opacity:0.4;">None</span>'}</div></td>
+    `;
+    resultsTbody.appendChild(row);
+  });
+}
+
+// Bind Action click handlers
 submitBidBtn.addEventListener('click', () => {
   if (!clientState.isMyTurn || clientState.selectedCards.length === 0) return;
   socket.emit('submitBid', { addedCards: clientState.selectedCards });
@@ -361,4 +637,8 @@ passBtn.addEventListener('click', () => {
   if (!clientState.isMyTurn) return;
   socket.emit('passAuction');
   clientState.selectedCards = [];
+});
+
+restartBtn.addEventListener('click', () => {
+  socket.emit('startGame');
 });

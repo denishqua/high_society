@@ -4,16 +4,21 @@ This repository contains two digital implementations of Reiner Knizia's classic 
 
 ---
 
-## Workspace Structure
+## The Two Versions: Key Differences
 
-* [**`hotseat/`**](file:///Users/denis/Projects/high_society/hotseat/)
-  An "Ape Aristocracy" themed digital implementation of High Society designed for local, same-screen "hotseat" multiplayer and playing against computer AI opponents. Built with Python (Flask, REST API, heuristic and agent-based CPUs) and modern vanilla HTML/CSS.
-* [**`multiplayer/`**](file:///Users/denis/Projects/high_society/multiplayer/)
-  A completely standalone, real-time multiplayer implementation designed for playing with friends on their own mobile devices over your local network or public tunnels (e.g., Pinggy). Built with Node.js, Express, and WebSockets (Socket.io).
+| Feature | 1. Local Hotseat (`hotseat/`) | 2. Unified Network Multiplayer (`multiplayer/`) |
+| :--- | :--- | :--- |
+| **Technology** | Python (Flask REST API) & HTML/CSS/JS | Node.js (Express & Socket.io) |
+| **Play Style** | Same-screen "hotseat" (passing a laptop/device) | Separate devices (everyone plays on their own phone) |
+| **Opponents** | Supports human players + heuristic computer AI bots | Purely human-to-human local or internet multiplayer |
+| **Layout** | Single shared display | **Unified Mobile Dashboard**: Renders the complete board state (bids, tableaus, ticker) and private hands on one screen |
+| **UX Additions** | Premium Ape Aristocracy Theme | Synthesized Audio Turn Chimes, Selectable Avatars, pre-populated fun titles, and a synchronized 30s Turn Timer |
 
 ---
 
 ## 1. Local Hotseat Implementation (`hotseat/`)
+
+Ideal for playing against computer AI bots or sitting together passing a single laptop/tablet around.
 
 ### Setup & Launch
 1. Ensure Python 3 is installed.
@@ -29,16 +34,22 @@ This repository contains two digital implementations of Reiner Knizia's classic 
    ```bash
    python app.py
    ```
-5. Open your browser to `http://127.0.0.1:5000`.
+5. Open your browser to `http://127.0.0.1:5000` to start playing.
 
 ---
 
-## 2. Local Network Multiplayer Implementation (`multiplayer/`)
+## 2. Unified Network Multiplayer Implementation (`multiplayer/`)
 
-### Architecture
-* **The Central Display (`/board`)**: Shared TV or laptop screen hosting the main physical board. Shows status cards, active bidding pools, player statuses, and final results.
-* **The Player Controller (`/`)**: Mobile phone interface. Displays private hands ($1k–$25k), and handles interactive bidding/passing.
-* **Network Tunneling Ready**: Listens globally on `0.0.0.0:3000` to seamlessly accept incoming tunnels (e.g. Pinggy, Ngrok) or direct local network IP connections.
+Ideal for playing with friends where **everyone joins on their own mobile phone**. 
+Each device shows a beautiful glassmorphic dashboard: the public board elements (cards left, won assets, other players' bids) on top, and their private banknotes hand + bidding controls at the bottom.
+
+### Features
+* **Selectable Avatars & Titles**: Pre-populates a random funny Ape Aristocracy title (like *Archduke Orangutan*) and lets players pick an avatar (🦁, 🦊, 🦍, 🐨, 🐸, 🐼, 👑, 🎩).
+* **Synthesized Turn Chime**: Uses browser-native Web Audio API to play a gorgeous crystal chord bell strike on the active player's phone when their turn starts.
+* **30-Second Turn Timer**: Keeps players moving! A synchronized visual timer ticks down from 30s. If it hits 0s, the server automatically passes for them, returns their table bid, and advances the turn.
+* **Collapsible Ticker**: Collapses the game logs chronicle natively to save screen space, fully expandable with a single tap.
+* **Lobby Kick Support**: The lobby leader (first player to join) can kick players from the lobby before starting.
+* **Session Persistence**: If a phone screen goes to sleep or connection drops, simply refreshing/reopening the page instantly reconnects the player back to their seat, hand, and active bidding pool.
 
 ### Setup & Launch
 1. Ensure Node.js (v18+) is installed.
@@ -54,6 +65,17 @@ This repository contains two digital implementations of Reiner Knizia's classic 
    ```bash
    node server.js
    ```
-5. **Accessing the Game**:
-   * **Central Display**: Connect your laptop/TV to `http://<your-computer-ip>:3000/board`.
-   * **Players (Mobile)**: Scan a QR code of your local computer IP or tunnel URL pointing to `http://<your-computer-ip>:3000/` to join the game!
+
+### Exposing the Game for Friends (Mobile Play)
+Since the server listens globally on port `3000`, you can easily invite friends to join from their devices:
+
+#### Option A: Expose via Pinggy Tunnel (Recommended for Remote Friends / Cellular)
+Open a new terminal window on your host computer and run the following command to instantly expose the local server globally:
+```bash
+ssh -p 443 -R 0:localhost:3000 -o StrictHostKeyChecking=no free@a.pinggy.io
+```
+This command will output a public URL (e.g. `https://randomsubdomain.pinggy.link`). Text this URL to your friends, and they can tap it on their phones to join the lobby instantly!
+
+#### Option B: Local Wi-Fi (For Friends on the Same Router)
+Invite friends to connect to your Wi-Fi, and open their phone browsers to your local computer IP address:
+`http://<your-computer-local-ip>:3000`

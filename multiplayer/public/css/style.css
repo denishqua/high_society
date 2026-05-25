@@ -38,7 +38,7 @@ body {
   color: #e0e7e3;
   min-height: 100vh;
   overflow-x: hidden;
-  line-height: 1.5;
+  line-height: 1.4;
 }
 
 h1, h2, h3, .luxury-text {
@@ -55,13 +55,12 @@ h1, h2, h3, .luxury-text {
   border: 1px solid var(--glass-border);
   box-shadow: 0 8px 32px var(--glass-shadow);
   border-radius: 16px;
-  padding: 20px;
+  padding: 15px;
   transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
 .glass-panel:hover {
-  border-color: rgba(223, 186, 89, 0.3);
-  box-shadow: 0 12px 40px rgba(223, 186, 89, 0.08);
+  border-color: rgba(223, 186, 89, 0.25);
 }
 
 /* Glowing Gold Text */
@@ -81,19 +80,19 @@ button {
   font-family: var(--font-sans);
   font-weight: 600;
   font-size: 1rem;
-  padding: 12px 24px;
+  padding: 12px 20px;
   transition: all 0.3s ease;
 }
 
 button:disabled {
-  opacity: 0.4;
+  opacity: 0.3;
   cursor: not-allowed;
 }
 
 .btn-primary {
   background: var(--gold-gradient);
   color: #102018;
-  box-shadow: 0 4px 15px rgba(223, 186, 89, 0.3);
+  box-shadow: 0 4px 15px rgba(223, 186, 89, 0.35);
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 1px;
@@ -116,7 +115,6 @@ button:disabled {
 
 .btn-secondary:hover:not(:disabled) {
   background: rgba(255, 255, 255, 0.15);
-  border-color: rgba(255, 255, 255, 0.3);
 }
 
 .btn-danger {
@@ -138,21 +136,21 @@ button:disabled {
    LOBBY / JOIN VIEW
    ========================================================================== */
 .lobby-container {
-  max-width: 480px;
-  margin: 10vh auto;
-  padding: 30px;
+  max-width: 440px;
+  margin: 5vh auto;
+  padding: 25px;
   text-align: center;
 }
 
 .lobby-container .logo {
   font-size: 2.2rem;
-  margin-bottom: 10px;
+  margin-bottom: 5px;
 }
 
 .lobby-subtitle {
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   opacity: 0.7;
-  margin-bottom: 30px;
+  margin-bottom: 25px;
   letter-spacing: 2px;
   text-transform: uppercase;
 }
@@ -160,22 +158,23 @@ button:disabled {
 .join-form {
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: 12px;
   text-align: left;
 }
 
 .join-form label {
   font-weight: 600;
-  opacity: 0.9;
-  font-size: 0.9rem;
+  opacity: 0.8;
+  font-size: 0.8rem;
+  letter-spacing: 0.5px;
 }
 
 .join-form input {
   background: rgba(0, 0, 0, 0.4);
   border: 1px solid var(--glass-border);
   color: #fff;
-  padding: 14px;
-  font-size: 1.1rem;
+  padding: 12px;
+  font-size: 1.05rem;
   border-radius: 12px;
   font-family: var(--font-sans);
   transition: all 0.3s ease;
@@ -187,13 +186,48 @@ button:disabled {
   box-shadow: 0 0 15px rgba(223, 186, 89, 0.2);
 }
 
+/* AVATAR GRID PICKER */
+.avatar-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.avatar-item {
+  font-size: 1.6rem;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
+}
+
+.avatar-item:hover {
+  transform: scale(1.08);
+  background: rgba(223, 186, 89, 0.08);
+  border-color: rgba(223, 186, 89, 0.2);
+}
+
+.avatar-item.selected {
+  background: rgba(223, 186, 89, 0.15);
+  border-color: var(--gold-primary);
+  box-shadow: 0 0 15px rgba(223, 186, 89, 0.35);
+  transform: scale(1.1);
+}
+
 /* ==========================================================================
-   PLAYER CONTROLLER VIEW (index.html)
+   UNIFIED BOARD & CONSOLE player-layout (index.html)
    ========================================================================== */
 .player-layout {
+  max-width: 600px;
+  margin: 0 auto;
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  min-height: 100vh;
   padding: 10px;
   gap: 10px;
 }
@@ -203,12 +237,12 @@ button:disabled {
   justify-content: space-between;
   align-items: center;
   padding: 10px 15px;
-  height: 55px;
+  height: 50px;
 }
 
 .player-status-badge {
-  font-size: 0.8rem;
-  padding: 4px 10px;
+  font-size: 0.75rem;
+  padding: 4px 8px;
   border-radius: 20px;
   font-weight: 600;
 }
@@ -225,30 +259,118 @@ button:disabled {
   color: #ff9999;
 }
 
-/* Display Info Panel */
+/* HORIZONTAL SEATS LIST (UPPER DECK) */
+.player-seat-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 100px;
+  flex-shrink: 0;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.player-seat-card.active-turn {
+  border-color: var(--gold-primary);
+  background: rgba(223, 186, 89, 0.05);
+  box-shadow: 0 0 15px rgba(223, 186, 89, 0.2);
+  animation: glow-pulse 2s infinite;
+}
+
+.player-seat-card.passed {
+  opacity: 0.45;
+  filter: grayscale(0.5);
+}
+
+.player-seat-avatar {
+  font-size: 1.4rem;
+  margin-bottom: 2px;
+}
+
+.player-seat-name {
+  font-size: 0.7rem;
+  font-weight: 700;
+  max-width: 80px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+}
+
+.player-seat-bid {
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #60a5fa;
+  margin: 2px 0;
+}
+
+.player-seat-cards {
+  display: flex;
+  gap: 2px;
+  flex-wrap: wrap;
+  justify-content: center;
+  min-height: 18px;
+}
+
+.player-seat-mini-card {
+  font-size: 0.55rem;
+  font-weight: bold;
+  padding: 1px 3px;
+  border-radius: 3px;
+  border: 0.5px solid rgba(223, 186, 89, 0.3);
+  background: rgba(223, 186, 89, 0.1);
+  color: var(--gold-primary);
+}
+
+.player-seat-mini-card.penalty {
+  background: rgba(139, 0, 0, 0.2);
+  border-color: #8b0000;
+  color: #ff9999;
+}
+
+.player-seat-card .dot-status {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #5cd699;
+}
+
+.player-seat-card .dot-status.offline {
+  background: #8b0000;
+}
+
+/* Central Stage Bidding Arena */
 .current-round-panel {
   flex: 1;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  gap: 15px;
-  min-height: 160px;
+  gap: 10px;
+  min-height: 180px;
+  padding: 15px;
   text-align: center;
 }
 
-/* The Auction Card component */
+/* Card stage render */
 .auction-card {
   width: 90px;
-  height: 130px;
+  height: 125px;
   border-radius: 12px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  padding: 10px;
+  padding: 8px;
   font-weight: bold;
   position: relative;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.6);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.6);
   overflow: hidden;
   transition: transform 0.5s ease;
 }
@@ -257,27 +379,28 @@ button:disabled {
   content: '';
   position: absolute;
   top: 0; left: 0; right: 0; bottom: 0;
-  background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, transparent 100%);
+  background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 100%);
   pointer-events: none;
 }
 
 .auction-card.positive {
   background: var(--emerald-gradient);
   border: 2px solid var(--gold-primary);
-  box-shadow: 0 0 20px rgba(223, 186, 89, 0.3);
+  box-shadow: 0 0 15px rgba(223, 186, 89, 0.25);
 }
 
 .auction-card.negative {
   background: var(--red-gradient);
   border: 2px solid #ff4d4d;
-  box-shadow: 0 0 20px rgba(255, 77, 77, 0.3);
+  box-shadow: 0 0 15px rgba(255, 77, 77, 0.25);
 }
 
 .card-top {
   font-family: var(--font-sans);
-  font-size: 0.7rem;
+  font-size: 0.65rem;
   opacity: 0.8;
   text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .card-center {
@@ -292,57 +415,76 @@ button:disabled {
   opacity: 0.8;
 }
 
-/* Action Console */
+/* ACTIVE TURN TIMER PROGRESS BAR */
+.timer-bar-container {
+  width: 100%;
+  height: 6px;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 4px;
+  overflow: hidden;
+  border: 0.5px solid rgba(255, 255, 255, 0.08);
+}
+
+.timer-bar {
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(90deg, #5cd699 0%, #dfba59 60%, #ff4d4d 100%);
+  background-size: 100% 100%;
+  transition: width 0.1s linear;
+  border-radius: 4px;
+}
+
+/* Console Panel actions */
 .console-panel {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
 .turn-banner {
   text-align: center;
   font-weight: 700;
-  padding: 8px;
+  padding: 6px;
   border-radius: 8px;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
 }
 
 .turn-mine {
-  background: rgba(223, 186, 89, 0.15);
+  background: rgba(223, 186, 89, 0.12);
   border: 1px solid var(--gold-primary);
   color: var(--gold-primary);
   animation: pulse 1.5s infinite;
 }
 
 .turn-waiting {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
   color: #a0a7a3;
 }
 
-/* Active Bid Selection Board */
+/* Active Bid Zone Tray */
 .bid-construction-zone {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
   background: rgba(0,0,0,0.25);
   border-radius: 12px;
-  padding: 10px;
+  padding: 8px 12px;
 }
 
 .zone-label {
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   opacity: 0.6;
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 0.5px;
   display: flex;
   justify-content: space-between;
 }
 
 .selected-bills-tray {
   display: flex;
-  gap: 8px;
-  min-height: 48px;
+  gap: 6px;
+  min-height: 38px;
   align-items: center;
   flex-wrap: wrap;
 }
@@ -350,29 +492,28 @@ button:disabled {
 .bid-actions-row {
   display: grid;
   grid-template-columns: 2fr 1fr;
-  gap: 10px;
+  gap: 8px;
 }
 
-/* Private Hand Layout */
+/* Banknote private Hand cards */
 .private-hand-panel {
-  background: rgba(0, 0, 0, 0.35);
-  border: 1px solid rgba(255,255,255,0.05);
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255,255,255,0.04);
   border-radius: 16px;
-  padding: 12px 10px;
-  margin-top: auto;
+  padding: 10px 10px;
 }
 
 .hand-label {
   font-size: 0.75rem;
   opacity: 0.6;
   text-transform: uppercase;
-  letter-spacing: 1px;
-  margin-bottom: 8px;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
 }
 
 .bills-scroll-wrapper {
   overflow-x: auto;
-  padding: 5px 0 10px 0;
+  padding: 4px 0 8px 0;
   display: flex;
   scrollbar-width: thin;
   scrollbar-color: var(--gold-primary) rgba(0,0,0,0.3);
@@ -389,329 +530,97 @@ button:disabled {
 
 .bills-container {
   display: flex;
-  gap: 10px;
-  padding: 0 5px;
+  gap: 8px;
+  padding: 0 4px;
 }
 
-/* BANKNOTE STYLING */
+/* BANKNOTE STYLE DETAILS */
 .banknote {
-  width: 58px;
-  height: 84px;
+  width: 54px;
+  height: 78px;
   border-radius: 8px;
   background: radial-gradient(circle at center, #1b382b 0%, #091711 100%);
   border: 1.5px solid var(--gold-primary);
-  box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+  box-shadow: 0 3px 6px rgba(0,0,0,0.4);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  padding: 6px;
+  padding: 4px;
   color: var(--gold-primary);
   font-family: var(--font-display);
   font-weight: 700;
   cursor: pointer;
   user-select: none;
   position: relative;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   flex-shrink: 0;
 }
 
 .banknote::before {
   content: '';
   position: absolute;
-  border: 1px solid rgba(223, 186, 89, 0.3);
-  top: 3px; left: 3px; bottom: 3px; right: 3px;
+  border: 1px solid rgba(223, 186, 89, 0.2);
+  top: 2px; left: 2px; bottom: 2px; right: 2px;
   border-radius: 5px;
   pointer-events: none;
 }
 
 .banknote .bill-val-small {
-  font-size: 0.5rem;
+  font-size: 0.45rem;
   line-height: 1;
 }
 
 .banknote .bill-val-center {
-  font-size: 1.1rem;
+  font-size: 0.95rem;
   text-align: center;
   margin: auto 0;
 }
 
 .banknote:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 8px 16px rgba(223, 186, 89, 0.15);
+  transform: translateY(-4px);
+  box-shadow: 0 6px 12px rgba(223, 186, 89, 0.15);
 }
 
 .banknote.selected {
-  transform: translateY(-12px);
+  transform: translateY(-8px);
   border-color: #fff;
-  box-shadow: 0 0 15px rgba(255, 255, 255, 0.4);
+  box-shadow: 0 0 12px rgba(255, 255, 255, 0.35);
   background: radial-gradient(circle at center, #2e5c46 0%, #0d261b 100%);
 }
 
 .banknote.disabled {
-  opacity: 0.35;
+  opacity: 0.3;
   filter: grayscale(1);
   transform: none;
   cursor: not-allowed;
 }
 
-/* ==========================================================================
-   CENTRAL DISPLAY SCREEN VIEW (board.html)
-   ========================================================================== */
-.board-layout {
-  display: grid;
-  grid-template-columns: 3fr 1fr;
-  height: 100vh;
-  padding: 20px;
-  gap: 20px;
+/* NATIVE CHRONICLES TICKER SUMMARY BLOCK */
+.chronicles-details {
+  padding: 10px 12px;
+  margin-top: 5px;
+  border: 1px solid rgba(223, 186, 89, 0.1);
+  background: rgba(10, 15, 12, 0.4);
 }
 
-.main-board-container {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
+.chronicles-details[open] {
+  border-color: rgba(223, 186, 89, 0.3);
 }
 
-.board-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  height: 60px;
-}
-
-.board-logo {
-  font-size: 2.2rem;
-}
-
-.deck-indicator {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-}
-
-.deck-count-pill {
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.12);
-  padding: 6px 12px;
-  border-radius: 20px;
-  font-size: 0.85rem;
-}
-
-/* Central Auction Arena */
-.auction-arena {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: space-around;
-  padding: 30px;
-  min-height: 320px;
-}
-
-.active-card-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 15px;
-}
-
-.arena-card {
-  width: 160px;
-  height: 230px;
-  border-radius: 20px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  padding: 20px;
-  box-shadow: 0 20px 50px rgba(0,0,0,0.8);
-  position: relative;
-  overflow: hidden;
-}
-
-.arena-card.positive {
-  background: var(--emerald-gradient);
-  border: 3.5px solid var(--gold-primary);
-  box-shadow: 0 0 45px rgba(223, 186, 89, 0.4);
-}
-
-.arena-card.negative {
-  background: var(--red-gradient);
-  border: 3.5px solid #ff4d4d;
-  box-shadow: 0 0 45px rgba(255, 77, 77, 0.4);
-}
-
-.arena-card .card-center {
-  font-size: 3rem;
-}
-
-.arena-card .card-top {
-  font-size: 0.9rem;
-  letter-spacing: 1.5px;
-}
-
-.arena-card .card-bottom {
-  font-size: 0.8rem;
-}
-
-.bidding-summary {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  max-width: 320px;
-}
-
-.arena-badge {
-  background: rgba(0, 0, 0, 0.4);
-  border: 1px solid rgba(223, 186, 89, 0.2);
-  border-radius: 12px;
-  padding: 12px 20px;
-}
-
-.arena-badge label {
-  font-size: 0.75rem;
-  opacity: 0.6;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-}
-
-.arena-badge .value {
-  font-size: 1.8rem;
-  font-weight: 800;
-}
-
-/* Players Grid on Central Board */
-.players-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 20px;
-}
-
-.player-panel {
-  position: relative;
-  overflow: hidden;
-}
-
-.player-panel.active-turn {
-  border-color: var(--gold-primary);
-  box-shadow: 0 0 25px rgba(223, 186, 89, 0.15);
-}
-
-.player-panel.active-turn::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0; height: 4px;
-  background: var(--gold-gradient);
-}
-
-.player-panel.passed {
-  opacity: 0.55;
-  border-color: rgba(255,255,255,0.05);
-}
-
-.player-panel-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12px;
-}
-
-.player-title {
-  font-size: 1.1rem;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.dot-status {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #5cd699;
-}
-
-.dot-status.offline {
-  background: #8b0000;
-}
-
-.player-bid-display {
-  background: rgba(0,0,0,0.3);
-  padding: 10px;
-  border-radius: 10px;
-  margin-bottom: 12px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.player-bid-display label {
-  font-size: 0.75rem;
-  opacity: 0.6;
-}
-
-.player-bid-display .val {
-  font-weight: 700;
-  font-size: 1.1rem;
-}
-
-.player-tableau-title {
-  font-size: 0.75rem;
-  opacity: 0.6;
-  text-transform: uppercase;
-  margin-bottom: 6px;
-}
-
-.player-tableau-cards {
-  display: flex;
-  gap: 5px;
-  flex-wrap: wrap;
-  min-height: 35px;
-}
-
-.mini-card {
-  padding: 3px 6px;
-  font-size: 0.7rem;
-  font-weight: bold;
-  border-radius: 4px;
-  border: 1px solid rgba(223, 186, 89, 0.3);
-  background: rgba(223, 186, 89, 0.1);
+.chronicles-details summary::marker {
   color: var(--gold-primary);
 }
 
-.mini-card.penalty {
-  background: rgba(139, 0, 0, 0.2);
-  border-color: #8b0000;
-  color: #ff9999;
-}
-
-/* Sidebar (Log & Ticker) */
-.sidebar-panel {
-  display: flex;
-  flex-direction: column;
-  height: calc(100vh - 40px);
-  gap: 20px;
-}
-
-.log-title {
-  font-size: 1.1rem;
-  margin-bottom: 15px;
-  border-bottom: 1px solid rgba(255,255,255,0.08);
-  padding-bottom: 8px;
-}
-
 .log-ticker {
-  flex: 1;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding-right: 5px;
+  scrollbar-width: thin;
 }
 
 .log-entry {
-  font-size: 0.82rem;
-  padding: 8px 12px;
-  border-radius: 8px;
+  font-size: 0.78rem;
+  padding: 6px 10px;
+  border-radius: 6px;
   background: rgba(0,0,0,0.2);
-  border-left: 3px solid #dfba59;
+  border-left: 2.5px solid #dfba59;
 }
 
 .log-entry.success { border-left-color: #5cd699; }
@@ -722,13 +631,23 @@ button:disabled {
 .log-entry.card { border-left-color: #a855f7; }
 
 .log-entry .time {
-  font-size: 0.7rem;
-  opacity: 0.5;
-  margin-right: 5px;
+  font-size: 0.65rem;
+  opacity: 0.4;
+  margin-right: 4px;
+}
+
+.mini-card {
+  padding: 2px 5px;
+  font-size: 0.65rem;
+  font-weight: bold;
+  border-radius: 4px;
+  border: 1px solid rgba(223, 186, 89, 0.25);
+  background: rgba(223, 186, 89, 0.08);
+  color: var(--gold-primary);
 }
 
 /* ==========================================================================
-   TICKER SCREEN OVERLAYS (FINISH RENDER)
+   RESULTS SCOREBOARD OVERLAYS
    ========================================================================== */
 .finish-overlay {
   position: fixed;
@@ -739,48 +658,46 @@ button:disabled {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 30px;
+  padding: 20px;
 }
 
 .finish-card {
-  max-width: 800px;
-  width: 100%;
   text-align: center;
 }
 
 .finish-title {
-  font-size: 3rem;
-  margin-bottom: 10px;
+  font-size: 2.2rem;
+  margin-bottom: 5px;
 }
 
 .finish-subtitle {
-  font-size: 1rem;
+  font-size: 0.85rem;
   opacity: 0.7;
   letter-spacing: 2px;
   text-transform: uppercase;
-  margin-bottom: 40px;
+  margin-bottom: 25px;
 }
 
 .results-table {
   width: 100%;
   border-collapse: collapse;
-  margin-bottom: 40px;
+  margin-bottom: 25px;
 }
 
 .results-table th, .results-table td {
-  padding: 16px;
+  padding: 10px;
   text-align: left;
   border-bottom: 1px solid rgba(223, 186, 89, 0.1);
 }
 
 .results-table th {
   font-family: var(--font-display);
-  font-size: 0.9rem;
+  font-size: 0.8rem;
   opacity: 0.6;
 }
 
 .results-table tr.eliminated-row {
-  opacity: 0.5;
+  opacity: 0.55;
   background: rgba(139,0,0,0.05);
 }
 
@@ -791,35 +708,30 @@ button:disabled {
 .badge-eliminated {
   background: #8b0000;
   color: white;
-  font-size: 0.65rem;
-  padding: 2px 6px;
+  font-size: 0.6rem;
+  padding: 2px 4px;
   border-radius: 4px;
 }
 
-/* ANIMATIONS */
-@keyframes pulse {
-  0% { box-shadow: 0 0 0 0 rgba(223, 186, 89, 0.4); }
+/* ANIMATIONS AND KEYFRAMES */
+@keyframes glow-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(223, 186, 89, 0.35); }
   70% { box-shadow: 0 0 0 8px rgba(223, 186, 89, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(223, 186, 89, 0); }
+}
+
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgba(223, 186, 89, 0.3); }
+  70% { box-shadow: 0 0 0 6px rgba(223, 186, 89, 0); }
   100% { box-shadow: 0 0 0 0 rgba(223, 186, 89, 0); }
 }
 
 @keyframes float {
   0% { transform: translateY(0px); }
-  50% { transform: translateY(-5px); }
+  50% { transform: translateY(-4px); }
   100% { transform: translateY(0px); }
 }
 
 .float-animation {
-  animation: float 3s ease-in-out infinite;
-}
-
-/* Responsive Overrides */
-@media (max-width: 768px) {
-  .board-layout {
-    grid-template-columns: 1fr;
-    overflow-y: auto;
-  }
-  .sidebar-panel {
-    height: auto;
-  }
+  animation: float 2.5s ease-in-out infinite;
 }

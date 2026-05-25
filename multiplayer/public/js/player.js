@@ -321,6 +321,15 @@ function renderLobbyRoster(players) {
   }
 }
 
+function formatCardLabel(c) {
+  if (c.type === 'point') return `+${c.value}`;
+  if (c.type === 'multiplier') return `x2`;
+  if (c.name === 'Scandal') return `÷2`;
+  if (c.name === 'Faux Pas') return `-5`;
+  if (c.name === 'Passé') return `Vol`;
+  return c.name;
+}
+
 // Render player seats dashboard
 function renderPlayerSeats(players, currentPlayerIndex) {
   playersDashboard.innerHTML = "";
@@ -334,16 +343,30 @@ function renderPlayerSeats(players, currentPlayerIndex) {
     const connDot = `<span class="dot-status${p.connected ? '' : ' offline'}"></span>`;
     
     // tableau HTML
-    const tableauHTML = p.tableau.map(c => `
-      <span class="player-seat-mini-card${c.type === 'penalty' ? ' penalty' : ''}">${c.name}</span>
-    `).join("");
+    const tableauHTML = p.tableau.map(c => {
+      const isPenalty = c.type === 'penalty';
+      const label = formatCardLabel(c);
+      return `<span class="player-seat-mini-card${isPenalty ? ' penalty' : ''}" title="${c.name}">${label}</span>`;
+    }).join("");
+
+    // Render committed bills list
+    let billsListHTML = "";
+    if (p.currentBid.length > 0) {
+      billsListHTML = p.currentBid.map(val => `
+        <span class="player-seat-mini-card" style="border-color: #60a5fa; background: rgba(96,165,250,0.1); color: #93c5fd; font-size: 0.55rem; padding: 1px 3px;">
+          $${val/1000}k
+        </span>
+      `).join(" ");
+    }
 
     seatCard.innerHTML = `
       ${connDot}
       <div class="player-seat-avatar">${p.avatar}</div>
       <div class="player-seat-name">${p.name}</div>
       <div class="player-seat-bid">${p.bidTotal > 0 ? `$${p.bidTotal/1000}k` : '$0'}</div>
-      <div class="player-seat-cards" style="width: 100%;">
+      ${p.currentBid.length > 0 ? `<div style="display:flex; gap:2px; flex-wrap:wrap; justify-content:center; margin-bottom:4px; max-width:90px;">${billsListHTML}</div>` : ''}
+      <div style="font-size: 0.6rem; color: var(--gold-primary); font-weight: 700; margin-top: 2px;">Score: ${p.score} pts</div>
+      <div class="player-seat-cards" style="width: 100%; margin-top: 4px;">
         ${tableauHTML || '<span style="font-size:0.55rem; opacity:0.35; font-style:italic;">No assets</span>'}
       </div>
       <div style="font-size: 0.55rem; opacity: 0.6; margin-top: 4px; font-weight: bold;">Hand: ${p.cardsCount} cards</div>

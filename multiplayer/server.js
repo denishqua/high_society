@@ -91,6 +91,29 @@ function sumArray(arr) {
   return arr.reduce((sum, val) => sum + val, 0);
 }
 
+// HELPER: Calculate current score of a player
+function calculateScore(player) {
+  let base = player.tableau
+    .filter(c => c.type === 'point')
+    .reduce((sum, c) => sum + c.value, 0);
+
+  // Apply Faux Pas (-5 penalty)
+  if (player.tableau.some(c => c.name === "Faux Pas")) {
+    base -= 5;
+  }
+
+  // Apply Multipliers (each doubles points)
+  const multiplierCount = player.tableau.filter(c => c.type === 'multiplier').length;
+  let score = base * Math.pow(2, multiplierCount);
+
+  // Apply Scandal (halves score, rounded up)
+  if (player.tableau.some(c => c.name === "Scandal")) {
+    score = Math.ceil(score / 2.0);
+  }
+
+  return score;
+}
+
 // HELPER: Broadcast tailored updates to all players and central display
 function broadcastState() {
   // Public player data for board & players
@@ -104,7 +127,8 @@ function broadcastState() {
     hasPassed: p.hasPassed,
     connected: p.connected,
     cardsCount: p.hand.length,
-    pendingTheft: p.pendingTheft
+    pendingTheft: p.pendingTheft,
+    score: calculateScore(p)
   }));
 
   // Emit private state to each connected player socket
@@ -426,30 +450,6 @@ function endGame() {
       remainingPlayers.push(item.player);
     }
   });
-
-  // Calculate final score helper
-  function calculateScore(player) {
-    let base = player.tableau
-      .filter(c => c.type === 'point')
-      .reduce((sum, c) => sum + c.value, 0);
-
-    // Apply Faux Pas (-5 penalty)
-    if (player.tableau.some(c => c.name === "Faux Pas")) {
-      base -= 5;
-    }
-
-    // Apply Multipliers (each doubles points)
-    const multiplierCount = player.tableau.filter(c => c.type === 'multiplier').length;
-    let score = base * Math.pow(2, multiplierCount);
-
-    // Apply Scandal (halves score, rounded up)
-    if (player.tableau.some(c => c.name === "Scandal")) {
-      score = Math.ceil(score / 2.0);
-    }
-
-    return score;
-  }
-
   // Standings list
   const rankings = [];
   const eliminatedList = eliminatedPlayers.map(p => ({

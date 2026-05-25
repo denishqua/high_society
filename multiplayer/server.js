@@ -29,34 +29,35 @@ const STARTING_HAND = [1000, 2000, 3000, 4000, 5000, 8000, 10000, 12000, 15000, 
 // DECK INITIALIZER
 function getInitialDeck() {
   return [
-    { name: "Point 1", type: "point", value: 1, isEndGameTrigger: false },
-    { name: "Point 2", type: "point", value: 2, isEndGameTrigger: false },
-    { name: "Point 3", type: "point", value: 3, isEndGameTrigger: false },
-    { name: "Point 4", type: "point", value: 4, isEndGameTrigger: false },
-    { name: "Point 5", type: "point", value: 5, isEndGameTrigger: false },
-    { name: "Point 6", type: "point", value: 6, isEndGameTrigger: false },
-    { name: "Point 7", type: "point", value: 7, isEndGameTrigger: false },
-    { name: "Point 8", type: "point", value: 8, isEndGameTrigger: false },
-    { name: "Point 9", type: "point", value: 9, isEndGameTrigger: false },
-    { name: "Point 10", type: "point", value: 10, isEndGameTrigger: false },
-    { name: "Multiplier 1", type: "multiplier", value: 2, isEndGameTrigger: true },
-    { name: "Multiplier 2", type: "multiplier", value: 2, isEndGameTrigger: true },
-    { name: "Multiplier 3", type: "multiplier", value: 2, isEndGameTrigger: true },
-    { name: "Faux Pas", type: "penalty", value: -5, isEndGameTrigger: false },
+    { name: "+1", type: "point", value: 1, isEndGameTrigger: false },
+    { name: "+2", type: "point", value: 2, isEndGameTrigger: false },
+    { name: "+3", type: "point", value: 3, isEndGameTrigger: false },
+    { name: "+4", type: "point", value: 4, isEndGameTrigger: false },
+    { name: "+5", type: "point", value: 5, isEndGameTrigger: false },
+    { name: "+6", type: "point", value: 6, isEndGameTrigger: false },
+    { name: "+7", type: "point", value: 7, isEndGameTrigger: false },
+    { name: "+8", type: "point", value: 8, isEndGameTrigger: false },
+    { name: "+9", type: "point", value: 9, isEndGameTrigger: false },
+    { name: "+10", type: "point", value: 10, isEndGameTrigger: false },
+    { name: "x2", type: "multiplier", value: 2, isEndGameTrigger: true },
+    { name: "x2", type: "multiplier", value: 2, isEndGameTrigger: true },
+    { name: "x2", type: "multiplier", value: 2, isEndGameTrigger: true },
+    { name: "-5", type: "penalty", value: -5, isEndGameTrigger: false },
     { name: "Passé", type: "penalty", value: "discard_point", isEndGameTrigger: false },
-    { name: "Scandal", type: "penalty", value: "halve_score", isEndGameTrigger: true }
+    { name: "÷2", type: "penalty", value: "halve_score", isEndGameTrigger: true }
   ];
 }
 
 // GAME STATE
 const gameState = {
-  status: "waiting", // waiting, in_progress, round_over, finished
+  status: "waiting", // waiting, in_progress, pending_discard, round_over, finished
   players: [],       // list of active players { id, name, hand, tableau, currentBid, hasPassed, pendingTheft, connected, socketId, avatar }
   deck: [],
   currentCard: null,
   auctionType: null, // positive, negative
   currentPlayerIndex: 0,
   startingPlayerIndex: 0,
+  pendingDiscardPlayerIndex: null, // Tracks active discard player during Passé resolution
   endGameTriggersRevealed: 0,
   gameResults: null,
   gameLog: [],
@@ -98,7 +99,7 @@ function calculateScore(player) {
     .reduce((sum, c) => sum + c.value, 0);
 
   // Apply Faux Pas (-5 penalty)
-  if (player.tableau.some(c => c.name === "Faux Pas")) {
+  if (player.tableau.some(c => c.name === "-5")) {
     base -= 5;
   }
 
@@ -107,7 +108,7 @@ function calculateScore(player) {
   let score = base * Math.pow(2, multiplierCount);
 
   // Apply Scandal (halves score, rounded up)
-  if (player.tableau.some(c => c.name === "Scandal")) {
+  if (player.tableau.some(c => c.name === "÷2")) {
     score = Math.ceil(score / 2.0);
   }
 
@@ -142,6 +143,9 @@ function broadcastState() {
         auctionType: gameState.auctionType,
         isMyTurn: gameState.status === "in_progress" && gameState.currentPlayerIndex === gameState.players.indexOf(p),
         currentPlayerName: gameState.status === "in_progress" ? gameState.players[gameState.currentPlayerIndex].name : null,
+        isMyDiscardTurn: gameState.status === "pending_discard" && gameState.pendingDiscardPlayerIndex === gameState.players.indexOf(p),
+        discardPlayerName: gameState.status === "pending_discard" ? gameState.players[gameState.pendingDiscardPlayerIndex].name : null,
+        pendingDiscardPlayerIndex: gameState.status === "pending_discard" ? gameState.pendingDiscardPlayerIndex : null,
         myBidTotal: sumArray(p.currentBid),
         highestBid: getHighestBid(),
         endGameTriggersRevealed: gameState.endGameTriggersRevealed,
@@ -262,7 +266,7 @@ function startTurnTimer() {
   gameState.turnEndsAt = Date.now() + 30000;
   
   turnTimerInterval = setInterval(() => {
-    if (gameState.status !== "in_progress") {
+    if (gameState.status !== "in_progress" && gameState.status !== "pending_discard") {
       clearInterval(turnTimerInterval);
       return;
     }
@@ -270,7 +274,11 @@ function startTurnTimer() {
     // Check if time expired
     if (Date.now() >= gameState.turnEndsAt) {
       clearInterval(turnTimerInterval);
-      handleTurnTimeout();
+      if (gameState.status === "pending_discard") {
+        handleDiscardTimeout();
+      } else {
+        handleTurnTimeout();
+      }
     }
   }, 200);
 }
@@ -289,6 +297,47 @@ function handleTurnTimeout() {
   
   // Execute passing logic
   executePlayerPass(gameState.currentPlayerIndex);
+}
+
+function handleDiscardTimeout() {
+  const pIndex = gameState.pendingDiscardPlayerIndex;
+  if (pIndex === null || pIndex === undefined) return;
+  const p = gameState.players[pIndex];
+  if (!p) return;
+
+  const pointCards = p.tableau.filter(c => c.type === 'point');
+  if (pointCards.length > 0) {
+    // Sort ascending by value to find the lowest-value Point card
+    pointCards.sort((a, b) => a.value - b.value);
+    const discarded = pointCards[0];
+    const idx = p.tableau.findIndex(c => c.name === discarded.name && c.value === discarded.value);
+    if (idx !== -1) {
+      p.tableau.splice(idx, 1);
+    }
+    logMessage(`⏰ Time expired! ${p.name} automatically discards their lowest-value Point card: ${discarded.name}.`, "danger");
+  }
+
+  // Clear pending discard variables and resolve round
+  clearTurnTimer();
+  gameState.pendingDiscardPlayerIndex = null;
+
+  // Save round result
+  gameState.lastRoundResult = {
+    winner: p.name,
+    card: gameState.currentCard.name,
+    amount: 0,
+    type: "negative"
+  };
+
+  // Passing player starts the next round
+  gameState.startingPlayerIndex = pIndex;
+  gameState.status = "round_over";
+
+  broadcastState();
+
+  setTimeout(() => {
+    startRound();
+  }, 3500);
 }
 
 // CORE REUSABLE PASS AUCTION RESOLUTION HELP
@@ -376,19 +425,28 @@ function executePlayerPass(playerIndex) {
 
     logMessage(`💥 ${p.name} takes the penalty card ${gameState.currentCard.name} and reclaims their bid.`, "danger");
 
+    let isSelectionRequired = false;
+
     // Handle Theft/Passé card trigger
     if (gameState.currentCard.name === "Passé") {
       const pointCards = p.tableau.filter(c => c.type === 'point');
-      if (pointCards.length > 0) {
-        // Sort descending and discard highest
-        pointCards.sort((a, b) => b.value - a.value);
+      if (pointCards.length === 0) {
+        p.pendingTheft++;
+        logMessage(`Passé triggers, but ${p.name} has no point cards! A pending theft is recorded.`, "danger");
+      } else if (pointCards.length === 1) {
         const discarded = pointCards[0];
         const idx = p.tableau.findIndex(c => c.name === discarded.name && c.value === discarded.value);
         p.tableau.splice(idx, 1);
-        logMessage(`Passé triggers! ${p.name} discards their most valuable card: ${discarded.name}.`, "danger");
+        logMessage(`Passé triggers! ${p.name} automatically discards their only point card: ${discarded.name}.`, "danger");
       } else {
-        p.pendingTheft++;
-        logMessage(`Passé triggers, but ${p.name} has no point cards! A pending theft is recorded.`, "danger");
+        // More than 1 point card: Pause game and request choice!
+        isSelectionRequired = true;
+        gameState.status = "pending_discard";
+        gameState.pendingDiscardPlayerIndex = playerIndex;
+        logMessage(`Passé triggers! ${p.name} has multiple point cards and must select one to discard.`, "warning");
+        
+        // Start 30s discard timer
+        startTurnTimer();
       }
     } else {
       p.tableau.push(gameState.currentCard);
@@ -405,21 +463,23 @@ function executePlayerPass(playerIndex) {
       }
     });
 
-    // Save round result
-    gameState.lastRoundResult = {
-      winner: p.name,
-      card: gameState.currentCard.name,
-      amount: 0,
-      type: "negative"
-    };
+    if (!isSelectionRequired) {
+      // Save round result
+      gameState.lastRoundResult = {
+        winner: p.name,
+        card: gameState.currentCard.name,
+        amount: 0,
+        type: "negative"
+      };
 
-    // Passing player starts the next round
-    gameState.startingPlayerIndex = playerIndex;
-    gameState.status = "round_over";
+      // Passing player starts the next round
+      gameState.startingPlayerIndex = playerIndex;
+      gameState.status = "round_over";
 
-    setTimeout(() => {
-      startRound();
-    }, 3500);
+      setTimeout(() => {
+        startRound();
+      }, 3500);
+    }
   }
 
   broadcastState();
@@ -691,6 +751,55 @@ io.on('connection', (socket) => {
 
     // Re-use common pass engine
     executePlayerPass(playerIndex);
+  });
+
+  // 5b. SELECT DISCARD FOR PASSE
+  socket.on('selectDiscard', ({ cardName }) => {
+    if (gameState.status !== "pending_discard") {
+      socket.emit('actionError', 'Discard is not active.');
+      return;
+    }
+    const playerIndex = gameState.players.findIndex(p => p.socketId === socket.id);
+    if (playerIndex === -1 || playerIndex !== gameState.pendingDiscardPlayerIndex) {
+      socket.emit('actionError', 'It is not your turn to discard.');
+      return;
+    }
+
+    const p = gameState.players[playerIndex];
+    
+    // Find the Point card in player's tableau matching the name
+    const cardIdx = p.tableau.findIndex(c => c.type === 'point' && c.name === cardName);
+    if (cardIdx === -1) {
+      socket.emit('actionError', 'Card not found in your tableau.');
+      return;
+    }
+
+    // Discard the card!
+    const discardedCard = p.tableau[cardIdx];
+    p.tableau.splice(cardIdx, 1);
+    logMessage(`${p.name} selected and discarded Point card: ${discardedCard.name}.`, "danger");
+
+    // Clean up timer and discard state
+    clearTurnTimer();
+    gameState.pendingDiscardPlayerIndex = null;
+
+    // Save round result
+    gameState.lastRoundResult = {
+      winner: p.name,
+      card: gameState.currentCard.name,
+      amount: 0,
+      type: "negative"
+    };
+
+    // Passing player starts the next round
+    gameState.startingPlayerIndex = playerIndex;
+    gameState.status = "round_over";
+
+    broadcastState();
+
+    setTimeout(() => {
+      startRound();
+    }, 3500);
   });
 
   // 6. CLIENT DISCONNECTION

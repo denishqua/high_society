@@ -238,7 +238,7 @@ socket.on('playerStateUpdate', (state) => {
   gameView.style.display = 'flex';
 
   // Chime trigger exactly once when turn starts, toggle active turn body glow class
-  if (state.isMyTurn) {
+  if (state.isMyTurn || state.isMyDiscardTurn) {
     document.body.classList.add('my-turn-active');
     if (!clientState.hadTurn) {
       clientState.hadTurn = true;
@@ -249,8 +249,8 @@ socket.on('playerStateUpdate', (state) => {
     clientState.hadTurn = false;
   }
 
-  // Clear local selected cards buffer if turn transitions away
-  if (!state.isMyTurn) {
+  // Clear local selected cards buffer if bidding turn transitions away or status isn't in_progress
+  if (!state.isMyTurn || state.status !== "in_progress") {
     clientState.selectedCards = [];
   }
 
@@ -281,8 +281,14 @@ socket.on('playerStateUpdate', (state) => {
   startCountdown(state.turnEndsAt, state.status);
 
   // 7. Console action updating
-  renderTurnBanner(state.isMyTurn, state.currentPlayerName, state.status);
-  renderHand(state.hand, state.isMyTurn);
+  renderTurnBanner(state.isMyTurn, state.currentPlayerName, state.status, state.isMyDiscardTurn, state.discardPlayerName);
+  
+  if (state.isMyDiscardTurn) {
+    renderDiscardChoices(state.players[state.myIndex]);
+  } else {
+    renderHand(state.hand, state.isMyTurn);
+  }
+  
   updateBiddingControls();
 });
 
@@ -324,11 +330,7 @@ function renderLobbyRoster(players) {
 }
 
 function formatCardLabel(c) {
-  if (c.type === 'point') return `+${c.value}`;
-  if (c.type === 'multiplier') return `x2`;
-  if (c.name === 'Scandal') return `÷2`;
-  if (c.name === 'Faux Pas') return `-5`;
-  if (c.name === 'Passé') return `—`;
+  if (c.name === 'Passé') return '—';
   return c.name;
 }
 
@@ -435,7 +437,7 @@ function renderAuctionCard(card, type, status, players) {
 function startCountdown(turnEndsAt, status) {
   if (countdownInterval) clearInterval(countdownInterval);
   
-  if (!turnEndsAt || status !== "in_progress") {
+  if (!turnEndsAt || (status !== "in_progress" && status !== "pending_discard")) {
     turnTimerContainer.style.display = 'none';
     return;
   }
@@ -468,12 +470,23 @@ function startCountdown(turnEndsAt, status) {
 }
 
 // Render player controls
-function renderTurnBanner(isMyTurn, activeName, status) {
+function renderTurnBanner(isMyTurn, activeName, status, isMyDiscardTurn, discardPlayerName) {
   turnBanner.className = "turn-banner";
   
   if (status === "round_over") {
     turnBanner.textContent = "Round resolved! Processing payouts...";
     turnBanner.classList.add("turn-waiting");
+    return;
+  }
+
+  if (status === "pending_discard") {
+    if (isMyDiscardTurn) {
+      turnBanner.textContent = "DISCARD A POINT CARD! SELECT A CARD FROM YOUR TABLEAU TO DISCARD.";
+      turnBanner.classList.add("turn-mine");
+    } else {
+      turnBanner.textContent = `Waiting for ${discardPlayerName || "player"} to discard a Point card...`;
+      turnBanner.classList.add("turn-waiting");
+    }
     return;
   }
 
@@ -516,6 +529,39 @@ function renderHand(hand, isMyTurn) {
     });
 
     billsContainer.appendChild(bill);
+  });
+}
+
+function renderDiscardChoices(me) {
+  billsContainer.innerHTML = "";
+  if (!me) return;
+  
+  const pointCards = me.tableau.filter(c => c.type === 'point');
+  if (pointCards.length === 0) {
+    billsContainer.innerHTML = `<div style="font-size: 0.8rem; opacity: 0.5; padding: 10px;">No point cards to discard. Waiting for server...</div>`;
+    return;
+  }
+
+  pointCards.forEach((card) => {
+    const discardCard = document.createElement('div');
+    discardCard.className = `banknote discard-choice`;
+    // Gorgeous custom crimson glow styling
+    discardCard.style.border = "2px solid #ef4444";
+    discardCard.style.background = "linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(127, 29, 29, 0.4) 100%)";
+    discardCard.style.color = "#fca5a5";
+    discardCard.style.boxShadow = "0 0 12px rgba(239, 68, 68, 0.4)";
+    
+    discardCard.innerHTML = `
+      <div class="bill-val-small" style="color: #fca5a5;">+${card.value}</div>
+      <div class="bill-val-center" style="font-size: 1.5rem; text-shadow: 0 0 5px rgba(239, 68, 68, 0.6); color: #fca5a5;">+${card.value}</div>
+      <div class="bill-val-small" style="text-align: right; color: #fca5a5;">DISCARD</div>
+    `;
+
+    discardCard.addEventListener('click', () => {
+      socket.emit('selectDiscard', { cardName: card.name });
+    });
+
+    billsContainer.appendChild(discardCard);
   });
 }
 

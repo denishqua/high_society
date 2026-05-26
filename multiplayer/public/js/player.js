@@ -317,12 +317,27 @@ function renderLobbyRoster(players) {
   // Start game controls
   const isLeader = players.length > 0 && players[0].id === clientState.playerId;
   if (isLeader) {
+    let actionHTML = '';
     if (players.length >= 3) {
-      lobbyActionRow.innerHTML = `<button id="start-game-btn" class="btn-primary" style="padding: 12px 30px; font-size: 0.95rem;">Start Game Session</button>`;
-      const startBtn = document.getElementById('start-game-btn');
-      startBtn.addEventListener('click', () => socket.emit('startGame'));
+      actionHTML += `<button id="start-game-btn" class="btn-primary" style="padding: 12px 30px; font-size: 0.95rem; margin-bottom: 8px;">Start Game Session</button>`;
     } else {
-      lobbyActionRow.innerHTML = `<div style="font-size: 0.8rem; color: var(--gold-primary); font-weight:600; text-transform: uppercase;">Awaiting Players (${players.length}/5)...</div>`;
+      actionHTML += `<div style="font-size: 0.8rem; color: var(--gold-primary); font-weight:600; text-transform: uppercase; margin-bottom: 8px;">Awaiting Players (${players.length}/5)...</div>`;
+    }
+    
+    if (players.length < 5) {
+      actionHTML += `<button id="add-cpu-btn" class="btn-secondary" style="padding: 8px 16px; font-size: 0.85rem; background: rgba(223, 186, 89, 0.05); border: 1px dashed var(--gold-primary); color: var(--gold-light); cursor: pointer; border-radius: 6px; transition: all 0.2s;">Add AI Player</button>`;
+    }
+    
+    lobbyActionRow.innerHTML = `<div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">${actionHTML}</div>`;
+    
+    const startBtn = document.getElementById('start-game-btn');
+    if (startBtn) {
+      startBtn.addEventListener('click', () => socket.emit('startGame'));
+    }
+    
+    const addCpuBtn = document.getElementById('add-cpu-btn');
+    if (addCpuBtn) {
+      addCpuBtn.addEventListener('click', () => socket.emit('addCpuPlayer'));
     }
   } else {
     lobbyActionRow.innerHTML = `<div style="font-size: 0.8rem; opacity: 0.7;">Waiting for lobby leader ${players[0] ? players[0].name : ''} to start...</div>`;

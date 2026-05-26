@@ -260,10 +260,32 @@ function advanceTurn() {
 
 // SERVER TIMER CONTROLS
 function startTurnTimer() {
-  if (turnTimerInterval) clearInterval(turnTimerInterval);
+  if (turnTimerInterval) {
+    clearInterval(turnTimerInterval);
+    clearTimeout(turnTimerInterval);
+  }
   
   // Set expiration timestamp to 30 seconds from now
   gameState.turnEndsAt = Date.now() + 30000;
+
+  // CPU TURN DETECTION AND AUTOMATION
+  if (gameState.status === "in_progress") {
+    const activePlayer = gameState.players[gameState.currentPlayerIndex];
+    if (activePlayer && activePlayer.isCpu) {
+      turnTimerInterval = setTimeout(() => {
+        runCpuTurn(gameState.currentPlayerIndex);
+      }, 1500);
+      return;
+    }
+  } else if (gameState.status === "pending_discard") {
+    const discardPlayer = gameState.players[gameState.pendingDiscardPlayerIndex];
+    if (discardPlayer && discardPlayer.isCpu) {
+      turnTimerInterval = setTimeout(() => {
+        runCpuDiscard(gameState.pendingDiscardPlayerIndex);
+      }, 1500);
+      return;
+    }
+  }
   
   turnTimerInterval = setInterval(() => {
     if (gameState.status !== "in_progress" && gameState.status !== "pending_discard") {
@@ -286,6 +308,7 @@ function startTurnTimer() {
 function clearTurnTimer() {
   if (turnTimerInterval) {
     clearInterval(turnTimerInterval);
+    clearTimeout(turnTimerInterval);
     turnTimerInterval = null;
   }
   gameState.turnEndsAt = null;
@@ -338,6 +361,33 @@ function handleDiscardTimeout() {
   setTimeout(() => {
     startRound();
   }, 3500);
+}
+
+// CORE REUSABLE BID AUCTION RESOLUTION HELP
+function executePlayerBid(playerIndex, addedCards) {
+  const p = gameState.players[playerIndex];
+
+  // Turn resolved: stop timer immediately
+  clearTurnTimer();
+
+  // Apply Bid
+  addedCards.forEach(card => {
+    const idx = p.hand.indexOf(card);
+    if (idx !== -1) {
+      p.hand.splice(idx, 1);
+      p.currentBid.push(card);
+    }
+  });
+
+  const newTotalBid = sumArray(p.currentBid);
+  const addedBidSum = sumArray(addedCards);
+
+  logMessage(`${p.name} raised their bid to $${newTotalBid / 1000}k (+ $${addedBidSum / 1000}k).`, "bid");
+
+  // Advance turn and trigger next turn timer
+  advanceTurn();
+  startTurnTimer();
+  broadcastState();
 }
 
 // CORE REUSABLE PASS AUCTION RESOLUTION HELP
@@ -576,6 +626,302 @@ function endGame() {
   broadcastState();
 }
 
+// ==========================================================================
+// COMPUTER / AI PLAYER (AgentBasedCPU) PORTED STRATEGY ENGINE
+// ==========================================================================
+
+// Helper: generate combinations of r elements from array
+function getCombinations(array, r) {
+  const result = [];
+  function helper(start, combo) {
+    if (combo.length === r) {
+      result.push([...combo]);
+      return;
+    }
+    for (let i = start; i < array.length; i++) {
+      combo.push(array[i]);
+      helper(i + 1, combo);
+      combo.pop();
+    }
+  }
+  helper(0, []);
+  return result;
+}
+
+// Helper: build AI beliefs structure
+function getAgentBeliefs(playerIndex) {
+  const p = gameState.players[playerIndex];
+  
+  const opponents = [];
+  gameState.players.forEach((pl, idx) => {
+    if (idx !== playerIndex) {
+      opponents.push({
+        id: pl.id,
+        name: pl.name,
+        wealth: sumArray(pl.hand),
+        score: calculateScore(pl),
+        bid: sumArray(pl.currentBid),
+        hasPassed: pl.hasPassed,
+        handSize: pl.hand.length,
+        tableau: [...pl.tableau]
+      });
+    }
+  });
+
+  const allMoney = gameState.players.map(pl => sumArray(pl.hand)).sort((a, b) => b - a);
+  const poorestMoney = allMoney[allMoney.length - 1];
+  const richestMoney = allMoney[0];
+
+  const oppMoney = opponents.map(opp => opp.wealth);
+  const poorestOppMoney = oppMoney.length > 0 ? Math.min(...oppMoney) : 0;
+
+  const myWealth = sumArray(p.hand);
+  const myScore = calculateScore(p);
+  const myBid = sumArray(p.currentBid);
+
+  const allScores = gameState.players.map(pl => calculateScore(pl));
+  const leaderScore = allScores.length > 0 ? Math.max(...allScores) : 0;
+
+  return {
+    myId: p.id,
+    myName: p.name,
+    myWealth: myWealth,
+    myScore: myScore,
+    myBid: myBid,
+    myHand: [...p.hand],
+    myTableau: [...p.tableau],
+    opponents: opponents,
+    auctionType: gameState.auctionType,
+    currentCard: gameState.currentCard,
+    highestBid: getHighestBid(),
+    endGameTriggers: gameState.endGameTriggersRevealed,
+    totalPlayers: gameState.players.length,
+    poorestMoney: poorestMoney,
+    richestMoney: richestMoney,
+    isPoorest: myWealth === poorestMoney,
+    isRichest: myWealth === richestMoney,
+    poorestOppMoney: poorestOppMoney,
+    marginToPoorest: myWealth - poorestOppMoney,
+    leaderScore: leaderScore,
+    isLeader: myScore === leaderScore
+  };
+}
+
+// AI Utility calculation: Poverty avoidance cash reserves check
+function calculateWealthUtility(beliefs, remainingMoney) {
+  const poorestOpp = beliefs.poorestOppMoney;
+  const margin = (remainingMoney - poorestOpp) / 1000; // Face value scaling (/ 1000)
+  const gameUrgency = 1.0 + (beliefs.endGameTriggers * 1.5);
+  
+  if (margin < 0) {
+    return margin * 8.0 * gameUrgency;
+  } else if (margin === 0) {
+    return -15.0 * gameUrgency;
+  } else if (margin <= 5) {
+    return (margin - 6) * 3.0 * gameUrgency;
+  } else {
+    return margin * 0.1;
+  }
+}
+
+// AI Utility calculation: evaluates standard card values vs penalty loss weights
+function calculateCardUtility(beliefs, card, actionType) {
+  if (beliefs.auctionType === 'positive') {
+    if (actionType === 'pass') {
+      return 0.0;
+    }
+    if (card.type === 'point') {
+      const desperation = 1.0 + (Math.max(0, beliefs.leaderScore - beliefs.myScore) / 20.0);
+      return card.value * 5.0 * desperation;
+    } else if (card.type === 'multiplier') {
+      const marginalValue = Math.max(beliefs.myScore, 10.0);
+      return marginalValue * 5.0;
+    }
+  } else { // Negative auction
+    if (actionType === 'bid') {
+      return 0.0;
+    }
+    if (card.name === '-5') {
+      const multiplierCount = beliefs.myTableau.filter(c => c.type === 'multiplier').length;
+      const multiplierFactor = Math.pow(2, multiplierCount);
+      const loss = 5.0 * multiplierFactor;
+      return -loss * 6.0;
+    } else if (card.name === '÷2') {
+      const loss = beliefs.myScore / 2.0;
+      return -Math.max(loss, 6.0) * 6.0;
+    } else if (card.name === 'Passé') {
+      const pointCards = beliefs.myTableau.filter(c => c.type === 'point').map(c => c.value);
+      const loss = pointCards.length > 0 ? Math.max(...pointCards) : 5.0;
+      return -loss * 6.0;
+    }
+  }
+  return 0.0;
+}
+
+// AI Utility calculation: Poverty Trap - forces opponent who is poorer to spend aggressively
+function calculateTacticalUtility(beliefs, actionType) {
+  if (beliefs.auctionType === 'positive' && actionType === 'pass') {
+    let highestBidder = null;
+    for (let opp of beliefs.opponents) {
+      if (opp.bid === beliefs.highestBid && beliefs.highestBid > 0) {
+        highestBidder = opp;
+        break;
+      }
+    }
+    if (highestBidder) {
+      const isPoorestOpp = (highestBidder.wealth === beliefs.poorestMoney);
+      if (isPoorestOpp && highestBidder.bid > highestBidder.wealth * 0.15) {
+        return 25.0;
+      }
+    }
+  }
+  return 0.0;
+}
+
+// AI general action evaluator
+function evaluateAction(beliefs, actionType, bidCombo = null) {
+  const card = beliefs.currentCard;
+  let remainingWealth = beliefs.myWealth;
+  if (actionType === 'bid') {
+    remainingWealth = beliefs.myWealth - sumArray(bidCombo);
+  }
+
+  // 1. Wealth Utility
+  const wealthUtility = calculateWealthUtility(beliefs, remainingWealth);
+
+  // 2. Card Utility
+  const cardUtility = calculateCardUtility(beliefs, card, actionType);
+
+  // 3. Tactical Utility
+  const tacticalUtility = calculateTacticalUtility(beliefs, actionType);
+
+  // 4. Overbid Waste Penalty & Card Count Flexibility Penalty
+  let wastePenalty = 0.0;
+  let cardCountPenalty = 0.0;
+
+  if (actionType === 'bid') {
+    const addedSum = sumArray(bidCombo);
+    const newBidTotal = beliefs.myBid + addedSum;
+    const waste = (newBidTotal - (beliefs.highestBid + 1000)) / 1000;
+
+    let wasteFactor = 2.5;
+    if (beliefs.myHand.length < 5) {
+      wasteFactor = 1.0;
+    }
+    wastePenalty = Math.max(0, waste) * wasteFactor;
+
+    const cardsSpent = bidCombo.length;
+    const remainingHand = beliefs.myHand.length - cardsSpent;
+
+    if (remainingHand === 0) {
+      cardCountPenalty = cardsSpent * 15.0;
+    } else if (remainingHand < 3) {
+      cardCountPenalty = cardsSpent * 8.0;
+    } else if (remainingHand < 5) {
+      cardCountPenalty = cardsSpent * 4.0;
+    } else {
+      cardCountPenalty = cardsSpent * 1.5;
+    }
+  }
+
+  return wealthUtility + cardUtility + tacticalUtility - wastePenalty - cardCountPenalty;
+}
+
+// Controller: Executes turn for the active AI player
+function runCpuTurn(playerIndex) {
+  if (gameState.status !== "in_progress" || playerIndex !== gameState.currentPlayerIndex) return;
+
+  const p = gameState.players[playerIndex];
+  if (p.hasPassed) return;
+
+  const beliefs = getAgentBeliefs(playerIndex);
+
+  // Evaluate PASS utility
+  const passUtility = evaluateAction(beliefs, 'pass');
+
+  let bestAction = 'pass';
+  let bestCombo = null;
+  let maxUtility = passUtility;
+
+  // Generate combinations up to 3 cards
+  for (let r = 1; r <= Math.min(3, p.hand.length); r++) {
+    const combos = getCombinations(p.hand, r);
+    for (let combo of combos) {
+      const bidAdded = sumArray(combo);
+      const newBid = sumArray(p.currentBid) + bidAdded;
+
+      // Check raise validity (must beat highest bid)
+      if (newBid <= beliefs.highestBid) {
+        continue;
+      }
+
+      // Evaluate bid combination
+      const bidUtility = evaluateAction(beliefs, 'bid', combo);
+      if (bidUtility > maxUtility) {
+        maxUtility = bidUtility;
+        bestAction = 'bid';
+        bestCombo = combo;
+      }
+    }
+  }
+
+  if (bestAction === 'bid' && bestCombo !== null) {
+    executePlayerBid(playerIndex, bestCombo);
+  } else {
+    executePlayerPass(playerIndex);
+  }
+}
+
+// Controller: Executes strategic Passé discard for the AI player
+function runCpuDiscard(playerIndex) {
+  if (gameState.status !== "pending_discard" || playerIndex !== gameState.pendingDiscardPlayerIndex) return;
+
+  const p = gameState.players[playerIndex];
+  
+  // Find all point cards in the CPU's tableau
+  const pointCards = p.tableau.filter(c => c.type === 'point');
+  if (pointCards.length === 0) {
+    clearTurnTimer();
+    gameState.pendingDiscardPlayerIndex = null;
+    gameState.status = "round_over";
+    broadcastState();
+    setTimeout(startRound, 3500);
+    return;
+  }
+
+  // Discard the lowest-value point card!
+  pointCards.sort((a, b) => a.value - b.value);
+  const discarded = pointCards[0];
+
+  const cardIdx = p.tableau.findIndex(c => c.type === 'point' && c.name === discarded.name && c.value === discarded.value);
+  if (cardIdx !== -1) {
+    p.tableau.splice(cardIdx, 1);
+    logMessage(`${p.name} (AI) automatically discards their lowest-value Point card: ${discarded.name}.`, "danger");
+  }
+
+  // Clean up timer and discard state
+  clearTurnTimer();
+  gameState.pendingDiscardPlayerIndex = null;
+
+  // Save round result
+  gameState.lastRoundResult = {
+    winner: p.name,
+    card: gameState.currentCard.name,
+    amount: 0,
+    type: "negative"
+  };
+
+  // Passing player starts next round
+  gameState.startingPlayerIndex = playerIndex;
+  gameState.status = "round_over";
+
+  broadcastState();
+
+  setTimeout(() => {
+    startRound();
+  }, 3500);
+}
+
 // SOCKET IO SERVER EVENT INTERFACES
 io.on('connection', (socket) => {
   console.log(`Socket connected: ${socket.id}`);
@@ -640,6 +986,49 @@ io.on('connection', (socket) => {
     if (gameState.status === "waiting") {
       startNewGame();
     }
+  });
+
+  // 3a. ADD CPU PLAYER TRIGGER
+  socket.on('addCpuPlayer', () => {
+    if (gameState.status !== "waiting") return;
+    if (gameState.players.length >= 5) return;
+
+    const aiNames = [
+      "AI Lord Chimington",
+      "AI Duke Macaque",
+      "AI Count Baboon",
+      "AI Sir Orangutan",
+      "AI Baron Gorilla",
+      "AI Viscount Gibbon",
+      "AI Marquess Mandrill"
+    ];
+
+    // Filter out names that are already taken
+    const existingNames = gameState.players.map(p => p.name);
+    const availableNames = aiNames.filter(name => !existingNames.includes(name));
+    const chosenName = availableNames.length > 0 ? availableNames[0] : `AI Bot ${gameState.players.length + 1}`;
+
+    const aiAvatars = ["🤖", "🦾", "👾", "💻", "🧠"];
+    const chosenAvatar = aiAvatars[gameState.players.length % aiAvatars.length];
+    const newPlayerId = "cpu_" + crypto.randomBytes(4).toString('hex');
+
+    const cpuPlayer = {
+      id: newPlayerId,
+      name: chosenName,
+      avatar: chosenAvatar,
+      hand: [...STARTING_HAND],
+      tableau: [],
+      currentBid: [],
+      hasPassed: false,
+      pendingTheft: 0,
+      connected: true,
+      socketId: null,
+      isCpu: true
+    };
+
+    gameState.players.push(cpuPlayer);
+    logMessage(`${chosenName} (AI) joined the game lobby.`, "success");
+    broadcastState();
   });
 
   // 3b. KICK PLAYER TRIGGER
@@ -714,19 +1103,7 @@ io.on('connection', (socket) => {
       return;
     }
 
-    // Apply Bid
-    addedCards.forEach(card => {
-      const idx = p.hand.indexOf(card);
-      p.hand.splice(idx, 1);
-      p.currentBid.push(card);
-    });
-
-    logMessage(`${p.name} raised their bid to $${newTotalBid / 1000}k (+ $${addedBidSum / 1000}k).`, "bid");
-
-    // Advance turn and trigger next turn timer
-    advanceTurn();
-    startTurnTimer();
-    broadcastState();
+    executePlayerBid(playerIndex, addedCards);
   });
 
   // 5. PASS AUCTION

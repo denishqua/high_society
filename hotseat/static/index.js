@@ -92,6 +92,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     })
                 });
                 if (res.ok) {
+                    delete handContainer.dataset.activePlayerId;
+                    delete handContainer.dataset.renderedHand;
                     showScreen('game');
                     startPolling();
                 }
@@ -386,13 +388,15 @@ document.addEventListener('DOMContentLoaded', () => {
             bidToBeatBadge.classList.add('hidden');
         }
         
-        // Only re-render hand if it changed to prevent resetting selection
+        // Only re-render hand if it changed (active player changed OR their hand was updated) to prevent resetting selection
         // Quick hack: clear and rebuild unless they are already building a bid.
-        // Actually it's easier to rebuild and clear selection on turn change
-        if (handContainer.dataset.activePlayerId !== activeP.id.toString()) {
+        // Actually it's easier to rebuild and clear selection on turn change or hand update
+        const sortedHandStr = [...activeP.hand].sort((a, b) => a - b).join(',');
+        if (handContainer.dataset.activePlayerId !== activeP.id.toString() || handContainer.dataset.renderedHand !== sortedHandStr) {
             selectedCards = [];
             selectedBidTotalEl.innerText = "0";
             handContainer.dataset.activePlayerId = activeP.id;
+            handContainer.dataset.renderedHand = sortedHandStr;
             updateHandUI(activeP.hand);
         }
 
